@@ -10,13 +10,59 @@ import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-import { useContext } from "react";
+import { useState,useContext } from "react";
 import { AuthContext } from "./context/AuthContext.jsx";
 import UserManagement from "./pages/UserManagement.jsx";
 
-function App() {
+// function App() {
 
+//   const { isLoggedIn } = useContext(AuthContext);
+
+//   return (
+//     <Router>
+//       <div>
+//         {isLoggedIn && (
+//           <div
+//             className="col-2 p-0"
+//             style={{ position: "fixed", top: 65, left: 0, height: "100vh", width: "250px" }}
+//           >
+//             <Sidebar />
+//           </div>
+//         )}
+        
+//         {isLoggedIn && <Navbar />}
+
+//         <Routes>
+//           <Route path="/login" element={<Login />} />
+//           <Route path="/register" element={<Register />} />
+//           {/* <Route path="/user_management" element={<UserManagement />} /> */}
+//           <Route 
+//             path="/" 
+//             element={isLoggedIn ? <Dashboard /> : <Navigate to="/login" />} 
+//           />
+
+// <Route
+//             path="/user_management"
+//             element={isLoggedIn ? <UserManagement /> : <Navigate to="/login" />}
+//           />
+         
+//         </Routes>
+//       </div>
+//     </Router>
+//   );
+// }
+
+// export default App;
+
+
+
+function App() {
   const { isLoggedIn } = useContext(AuthContext);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true); // Add this
+
+  const toggleSidebar = () => {
+    setIsSidebarOpen(prev => !prev);
+  };
 
   return (
     <Router>
@@ -24,32 +70,45 @@ function App() {
         {isLoggedIn && (
           <div
             className="col-2 p-0"
-            style={{ position: "fixed", top: 65, left: 0, height: "100vh", width: "250px" }}
+            style={{
+              position: "fixed",
+              top: 65,
+              left: 0,
+              height: "100vh",
+              width: isSidebarOpen ? "250px" : "0px",
+              overflow: "hidden",
+              transition: "width 0.3s ease"
+            }}
           >
-            <Sidebar />
+            <Sidebar isOpen={isSidebarOpen} />
           </div>
         )}
-        
-        {isLoggedIn && <Navbar />}
 
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          {/* <Route path="/user_management" element={<UserManagement />} /> */}
-          <Route 
-            path="/" 
-            element={isLoggedIn ? <Dashboard /> : <Navigate to="/login" />} 
-          />
+        {isLoggedIn && <Navbar toggleSidebar={toggleSidebar} />}
 
-<Route
-            path="/user_management"
-            element={isLoggedIn ? <UserManagement /> : <Navigate to="/login" />}
-          />
-         
-        </Routes>
+        <div
+          style={{
+            marginLeft: isLoggedIn && isSidebarOpen ? "200px" : "0px",
+            transition: "margin-left 0.3s ease"
+          }}
+        >
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route
+              path="/"
+              element={isLoggedIn ? <Dashboard /> : <Navigate to="/login" />}
+            />
+            <Route
+              path="/user_management"
+              element={isLoggedIn ? <UserManagement /> : <Navigate to="/login" />}
+            />
+          </Routes>
+        </div>
       </div>
     </Router>
   );
 }
 
 export default App;
+

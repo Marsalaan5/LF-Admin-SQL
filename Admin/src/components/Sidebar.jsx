@@ -2,14 +2,14 @@ import React from "react";
 import { Link } from "react-router-dom";
 import "@fortawesome/fontawesome-free/css/all.min.css";
 
-function Sidebar() {
+function Sidebar({isOpen}) {
   return (
     <div
-      className="sidebar container-fluid"
-      style={{ width: "250px", minHeight: "100vh", background: "pink" }}
+      className={`sidebar container-fluid ${isOpen ? "open" : "closed"}`}
+      style={{ width: "250px", minHeight: "100vh", background: "pink",}}
     >
       <div className="p-3">
-        <ul className="nav flex-column">
+        <ul className=" nav flex-column">
           <li className="nav-item mb-2">
             <Link
               to="/"

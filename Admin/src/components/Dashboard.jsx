@@ -2,7 +2,7 @@ import React from 'react';
 
 function Dashboard() {
   return (
-    <div className='container mt-5'>
+    <div className='container-fluid container mt-5'>
       <div className="row">
         <div className="col-lg-3 col-md-4 col-sm-6">
           <div className="card-stats card">

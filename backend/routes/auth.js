@@ -40,7 +40,7 @@ router.post('/register', upload.single('image'), async (req, res) => {
     return res.status(400).json({ message: req.fileValidationError });
   }
 
-  const { name, email, password, role = 'user' } = req.body;
+  const { name, email, password, role = 'user',status = 'active' } = req.body;
   const image = req.file ? req.file.path : null;
 
   try {
@@ -57,8 +57,8 @@ router.post('/register', upload.single('image'), async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, salt);
 
     const [result] = await pool.execute(
-      'INSERT INTO login (name, email, password, role, image, insert_time) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)',
-      [name, email, hashedPassword, role, image]
+      'INSERT INTO login (name, email, password, role, image, insert_time,status) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP , ?)',
+      [name, email, hashedPassword, role, image,status]
     );
     res.status(201).json({ message: 'User registered successfully', userId: result.insertId });
   } catch (err) {
@@ -112,7 +112,7 @@ router.get('/users', async (req, res) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
-    const [users] = await pool.execute('SELECT id, name, email,role FROM login');
+    const [users] = await pool.execute('SELECT id, name, email,role,image,status FROM login');
     res.status(200).json({ users });
   } catch (err) {
     console.error(err);
@@ -122,7 +122,7 @@ router.get('/users', async (req, res) => {
 
 router.put('/users/:id', authenticateToken,isAdmin, async (req, res) => {
   const { id } = req.params;
-  const { name, email, password,role } = req.body;
+  const { name, email, password,role,image, status } = req.body;
   
   try {
     const [user] = await pool.execute('SELECT * FROM login WHERE id = ?', [id]);
@@ -134,8 +134,8 @@ router.put('/users/:id', authenticateToken,isAdmin, async (req, res) => {
     const hashedPassword = password ? await bcrypt.hash(password, 10) : user[0].password;
 
     const [result] = await pool.execute(
-      'UPDATE login SET name = ?, email = ?, password = ?,  role = ? WHERE id = ?',
-      [name, email, hashedPassword,role, id, ]
+      'UPDATE login SET name = ?, email = ?, password = ?,  role = ?, image = ?, status = ? WHERE id = ?',
+      [name, email, hashedPassword,role,image, status,  id, ]
     );
 
     if (result.affectedRows === 0) {
