@@ -114,7 +114,7 @@ function UserManagement() {
   };
 
   return (
-    <div className="container-fluid mt-5 border shadow-sm w-100 h-100">
+    <div className="container-fluid mt-5 border shadow-sm">
       <div className="container mt-5 p-4 d-flex justify-content-between align-items-center border rounded shadow-sm bg-light">
         <h4 className="mb-0 fw-semibold text-primary">User Management</h4>
         <button

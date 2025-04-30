@@ -34,9 +34,46 @@ function Register() {
       };
 
   return (
-    <div className="d-flex justify-content-center align-items-center vh-100">
-      <div className="bg- white shadow-lg rounded p-4 w-30">
+
+    <div
+    style={{
+      backgroundImage: "url('/background.avif')",
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+      backgroundRepeat: "no-repeat",
+      height: "100vh",
+      width: "100vw",
+      position: "relative",
+      overflow: "hidden",
+    }}
+  >
+    <div
+      style={{
+        backgroundColor: "rgba(0, 0, 0, 0.5)",
+        position: "absolute",
+        top: 0,
+        left: 0,
+        height: "100%",
+        width: "100%",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+      }}
+    >
+      <div
+        className="bg-white p-4 rounded shadow-lg"
+        style={{ width: "100%", maxWidth: "400px" }}
+      >
         <h2 className="text-center text-primary">Register</h2>
+        {/* <h2 className="text-center text-primary">Login</h2> */}
+
+        {/* {errorMessage && (
+          <div className="alert alert-danger text-center" role="alert">
+            {errorMessage}
+          </div>
+        )} */}
+    
+   
         <form className="text-start" onSubmit={handleSubmit}>
           <div className="mb-3">
             <label htmlFor="name">
@@ -95,6 +132,7 @@ function Register() {
 
         </form>
       </div>
+    </div>
     </div>
   );
 }
