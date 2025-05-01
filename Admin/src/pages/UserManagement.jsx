@@ -71,6 +71,19 @@ function UserManagement() {
     }
   };
 
+  const handleAddUsers = async(e)=>{
+    e.preventDefault();
+    setLoading(true)
+    setMessage("")
+    try {
+      await axios.post("http://auth/register",newUser,{
+        headers:{ Authorization: `Bearer ${token}`}
+      })
+    } catch (error) {
+      
+    }
+  }
+
   const handleEditUser = (user) => {
     setEditUser(user);
   };
@@ -114,16 +127,22 @@ function UserManagement() {
   };
 
   return (
-    <div className="container-fluid mt-5 border shadow-sm">
+    <div className="container-fluid mt-5 p-5 border shadow-sm" >
+      {/* style={{
+      background: 'linear-gradient(to right,rgb(239, 255, 95),rgb(134, 254, 123))',
+      borderRadius: '10px',
+      // padding: '20px',
+      color: 'white',
+    }} > */}
       <div className="container mt-5 p-4 d-flex justify-content-between align-items-center border rounded shadow-sm bg-light">
         <h4 className="mb-0 fw-semibold text-primary">User Management</h4>
-        <button
+        {user?.role === "admin" && (<button
           className="btn btn-success d-flex align-items-center"
           data-bs-toggle="modal"
           data-bs-target="#addUserModal"
         >
           <i className="fas fa-plus me-2"></i> Add User
-        </button>
+        </button>)}
       </div>
 
       <div
@@ -479,6 +498,7 @@ function UserManagement() {
         <th>Name</th>
         <th>Email</th>
         <th>Status</th>
+        <th>Role</th>
         <th className="text-center">Actions</th>
       </tr>
     </thead>
@@ -493,7 +513,11 @@ function UserManagement() {
         users.map((userInTable, index) => (
           <tr key={userInTable.id}>
             <td>{index + 1}</td>
-            <td className="fw-semibold">{userInTable.name}</td>
+            <td className="fw-semibold">{userInTable.name.toLowerCase()
+    .split(" ")
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ")}
+    </td>
             <td>{userInTable.email}</td>
             <td>
              <span
@@ -510,6 +534,10 @@ function UserManagement() {
                     {userInTable.status}
                   </span>
             </td>
+            <td>{userInTable.role.toLowerCase()
+    .split(" ")
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ")}</td>
             <td className="text-center">
               {user?.role === "admin" && (
                 <>

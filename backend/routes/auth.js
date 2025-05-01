@@ -34,7 +34,7 @@ const upload = multer({
   },
 });
 
-router.post("/register", upload.single("image"), async (req, res) => {
+router.post("/register",upload.single("image"), async (req, res) => {
   if (req.fileValidationError) {
     return res.status(400).json({ message: req.fileValidationError });
   }

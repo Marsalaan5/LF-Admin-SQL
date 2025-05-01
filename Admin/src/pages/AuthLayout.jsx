@@ -21,7 +21,7 @@ function AuthLayout({ children }) {
             overflow: "hidden",
             height: "100vh",
             position: "fixed",
-            top: "65px",
+            top: "88px",
             left: "0",
           }}
         >

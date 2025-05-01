@@ -6,8 +6,13 @@ function Sidebar({isOpen}) {
   return (
     <div
       className={`sidebar container-fluid ${isOpen ? "open" : "closed"}`}
-      style={{ width: "250px", minHeight: "100vh", background: "pink",}}
-    >
+      style={{ height: '100vh',width:'100vw',
+        background: 'linear-gradient(to right, #ff7e5f, #ff7e5f)',
+        // borderRadius: '10px',
+        padding: '20px',
+        color: 'white',
+      }}>
+    
       <div className="p-3">
         <ul className=" nav flex-column">
           <li className="nav-item mb-2">
@@ -52,7 +57,7 @@ function Sidebar({isOpen}) {
               className="nav-link text-white d-flex align-items-center"
             >
               <i className="fas fa-icons me-2"></i>
-              <span>Icons</span>
+              <span>Staff</span>
             </Link>
           </li>
          
