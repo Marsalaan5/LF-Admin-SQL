@@ -6,14 +6,14 @@ function Sidebar({isOpen}) {
   return (
     <div
       className={`sidebar container-fluid ${isOpen ? "open" : "closed"}`}
-      style={{ height: '100vh',width:'100vw',
+      style={{ height: '100vh',
         background: 'linear-gradient(to right, #ff7e5f, #ff7e5f)',
         // borderRadius: '10px',
         padding: '20px',
         color: 'white',
       }}>
     
-      <div className="p-3">
+      <div className="p-2">
         <ul className=" nav flex-column">
           <li className="nav-item mb-2">
             <Link
@@ -24,6 +24,7 @@ function Sidebar({isOpen}) {
               <span>Dashboard</span>
             </Link>
           </li>
+          
           <li className="nav-item mb-2">
             <Link
               to="/user_management"

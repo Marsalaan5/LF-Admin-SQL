@@ -71,18 +71,6 @@ function UserManagement() {
     }
   };
 
-  const handleAddUsers = async(e)=>{
-    e.preventDefault();
-    setLoading(true)
-    setMessage("")
-    try {
-      await axios.post("http://auth/register",newUser,{
-        headers:{ Authorization: `Bearer ${token}`}
-      })
-    } catch (error) {
-      
-    }
-  }
 
   const handleEditUser = (user) => {
     setEditUser(user);
