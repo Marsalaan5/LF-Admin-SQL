@@ -93,6 +93,7 @@ function Navbar({ toggleSidebar }) {
                       .join(" ") ||
                       user?.email ||
                       "User"}
+                         {user?.role ? ` (${user.role})` : ""}
                   </span>
                 </button>
                 <ul
