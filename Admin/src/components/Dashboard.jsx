@@ -1,30 +1,74 @@
 
-import React, { useState, useEffect, useContext } from "react";
+
 import axios from "axios";
-import RoleChart from '../pages/RoleChart.jsx'; 
-import { AuthContext } from "../context/AuthContext"; 
+import RoleChart from "../pages/RoleChart.jsx";
+import { useState,useEffect,useContext,useRef } from "react";
+import { AuthContext } from "../context/AuthContext";
+import { io } from "socket.io-client"
+import toast from 'react-hot-toast'
 
 function Dashboard() {
-  const { token, user } = useContext(AuthContext); 
-  const [users, setUsers] = useState([]); 
-  const [loading, setLoading] = useState(true); 
+  const { token } = useContext(AuthContext);
+  const [users, setUsers] = useState([]);
+  const [roles, setRoles] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const fetchUsers = async () => {
+  const socket =  useRef(null);
+
+  // Fetch Users and Roles from backend
+  const fetchUsersAndRoles = async () => {
     try {
-      const res = await axios.get("http://localhost:5001/auth/users", {
+      const usersResponse = await axios.get("http://localhost:5001/auth/users", {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setUsers(res.data.users); 
-      setLoading(false); 
+      const rolesResponse = await axios.get("http://localhost:5001/auth/roles", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setUsers(usersResponse.data.users);
+      setRoles(rolesResponse.data.roles);
+      setLoading(false);
     } catch (err) {
-      console.error("Failed to load users", err);
+      console.error("Failed to fetch users or roles:", err);
       setLoading(false);
     }
   };
 
+  useEffect(()=>{
+    socket.current = io ("http://localhost:5001")
+    socket.current.on("connect",()=>{
+      console.log("Connected to socket:",socket.current.id)
+    })
+
+    socket.current.on("new-signup",(user)=>{
+      console.log("New user received:",user)
+      toast.success(`New user signed up:${user.name}`)
+    })
+
+return () => {
+  socket.current.disconnect()
+  console.log("Socket disconnected")
+}
+  },[])
+
+
+
   useEffect(() => {
-    fetchUsers();
-  }, [token]); 
+    fetchUsersAndRoles();
+  }, [token]);
+
+  // Function to get role name from roleId
+  // const getRoleName = (roleId) => {
+  //   if (!roles || roles.length === 0) return "unknown";
+  //   const role = roles.find((r) => r.id === roleId);
+  //   return role ? role.title.toLowerCase() : "unknown";
+  // };
+
+  const getRoleName = (roleValue) => {
+  if (!roles || roles.length === 0) return "unknown";
+  const role = roles.find((r) => r.id === roleValue || r.name === roleValue);
+  return role ? role.name.toLowerCase() : "unknown";
+};
 
   if (loading) {
     return (
@@ -41,22 +85,14 @@ function Dashboard() {
   return (
     <div className="container-fluid mt-5" style={{ paddingTop: "70px" }}>
       <div className="row">
-        {/* Storage Card */}
+        {/* Total Users */}
         <div className="col-lg-3 col-md-4 col-sm-6 mb-4">
-          <div className="card-stats card" >
-            {/* style={{
-    background: 'linear-gradient(to right,rgb(255, 95, 162),rgb(211, 105, 158))',
-    borderRadius: '10px',
-    padding: '20px',
-    color: 'white',
-  }}> */}
+          <div className="card-stats card">
             <div className="card-body">
               <div className="row">
                 <div className="col-5">
                   <div className="icon-big text-center icon-warning">
-                
-                    <i className="fas fa-users text-primary "></i>
-
+                    <i className="fas fa-users text-primary"></i>
                   </div>
                 </div>
                 <div className="col-7">
@@ -69,29 +105,21 @@ function Dashboard() {
             </div>
             <div className="card-footer">
               <hr />
-              <div className="stats" onClick={fetchUsers}  style={{ cursor: 'pointer' }}>
+              <div className="stats" onClick={fetchUsersAndRoles} style={{ cursor: "pointer" }}>
                 <i className="fas fa-sync-alt mr-1"></i> Update Now
               </div>
             </div>
           </div>
         </div>
 
-        {/* Revenue Card */}
+        {/* Active Users */}
         <div className="col-lg-3 col-md-4 col-sm-6 mb-4">
-          <div className="card-stats card" >
-            {/* style={{
-    background: 'linear-gradient(to right,rgb(95, 196, 255),rgb(123, 164, 254))',
-    borderRadius: '10px',
-    padding: '20px',
-    color: 'white',
-  }}> */}
+          <div className="card-stats card">
             <div className="card-body">
               <div className="row">
                 <div className="col-5">
                   <div className="icon-big text-center icon-warning">
-                    {/* <i className="fas fa-dollar-sign text-success"></i> */}
                     <i className="fas fa-user text-success"></i>
-
                   </div>
                 </div>
                 <div className="col-7">
@@ -104,29 +132,21 @@ function Dashboard() {
             </div>
             <div className="card-footer">
               <hr />
-              <div className="stats" onClick={fetchUsers}style={{ cursor: 'pointer' }}>
+              <div className="stats" onClick={fetchUsersAndRoles} style={{ cursor: "pointer" }}>
                 <i className="far fa-calendar-alt mr-1"></i> Last day
               </div>
             </div>
           </div>
         </div>
 
-        {/* Errors Card */}
+        {/* Inactive Users */}
         <div className="col-lg-3 col-md-4 col-sm-6 mb-4">
           <div className="card-stats card">
-             {/* style={{
-    background: 'linear-gradient(to right,rgb(59, 212, 28),rgb(34, 187, 116))',
-    borderRadius: '10px',
-    padding: '20px',
-    color: 'white',
-  }}> */}
             <div className="card-body">
               <div className="row">
                 <div className="col-5">
                   <div className="icon-big text-center icon-warning">
-                    {/* <i className="fas fa-exclamation-triangle text-danger"></i> */}
-                    <i className="fas fa-user text-secondary"></i>  
-
+                    <i className="fas fa-user text-secondary"></i>
                   </div>
                 </div>
                 <div className="col-7">
@@ -139,67 +159,52 @@ function Dashboard() {
             </div>
             <div className="card-footer">
               <hr />
-              <div className="stats" onClick={fetchUsers} style={{ cursor: 'pointer' }}>
+              <div className="stats" onClick={fetchUsersAndRoles} style={{ cursor: "pointer" }}>
                 <i className="far fa-clock mr-1"></i> In the last hour
               </div>
             </div>
           </div>
         </div>
 
-      
+        {/* Role Breakdown */}
         <div className="col-lg-3 col-md-4 col-sm-6 mb-4">
-          <div className="card-stats card" >
-            {/* style={{
-    background: 'linear-gradient(to right, #ff7e5f, #feb47b)',
-    borderRadius: '10px',
-    padding: '20px',
-    color: 'white',
-  }}> */}
+          <div className="card-stats card">
             <div className="card-body">
               <div className="row">
-                <div className="col-5">
-                  <div className="icon-big text-center icon-warning">
-                    <i className="fas fa-user text-primary"></i>
-                  </div>
-                </div>
-                <div className="col-4">
+                <div className="col-12">
                   <div className="numbers">
+                    <p className="card-category">Super Admin</p>
+                    <h4 className="card-title">
+                      {users.filter(user => getRoleName(user.roleId) === "superadmin").length}
+                    </h4>
                     <p className="card-category">Admin</p>
-                    <h4 className="card-title">{users.filter(user => user.role === "admin").length}</h4>
-                  </div>
-                </div>
-                <div className="col-3">
-                  <div className="numbers">
+                    <h4 className="card-title">
+                      {users.filter(user => getRoleName(user.roleId) === "admin").length}
+                    </h4>
                     <p className="card-category">Users</p>
-                    <h4 className="card-title">{users.filter(user => user.role === "user").length}</h4>
+                    <h4 className="card-title">
+                      {users.filter(user => getRoleName(user.roleId) === "user").length}
+                    </h4>
                   </div>
                 </div>
               </div>
             </div>
             <div className="card-footer">
               <hr />
-              <div className="stats" onClick={fetchUsers} style={{ cursor: 'pointer' }}>
+              <div className="stats" onClick={fetchUsersAndRoles} style={{ cursor: "pointer" }}>
                 <i className="fas fa-sync-alt mr-1"></i> Update now
               </div>
             </div>
           </div>
         </div>
-
-          
       </div>
 
+      {/* Chart */}
       <div className="row">
         <div className="col-md-6 mb-4">
-          <div className="card-stats card"> 
-          {/* style={{
-    background: 'linear-gradient(to right,rgb(239, 255, 95),rgb(134, 254, 123))',
-    borderRadius: '10px',
-    // padding: '20px',
-    color: 'white',
-  }}> */}
+          <div className="card-stats card">
             <div className="card-body">
-         
-              <RoleChart users={users} />
+              <RoleChart users={users} roles={roles} />
             </div>
           </div>
         </div>

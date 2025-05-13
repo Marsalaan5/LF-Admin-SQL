@@ -1,3 +1,5 @@
+
+
 import React from "react";
 import {
   PieChart,
@@ -11,15 +13,15 @@ import {
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#AA00FF"];
 
 function RoleDistributionChart({ users }) {
-  
+  // Prepare data for pie chart
   const roleCounts = users.reduce((acc, user) => {
-    acc[user.role] = (acc[user.role] || 0) + 1;
+    const normalizedRole = user.role.toLowerCase(); // Normalize the role name
+    acc[normalizedRole] = (acc[normalizedRole] || 0) + 1;
     return acc;
   }, {});
 
-
   const data = Object.keys(roleCounts).map((role) => ({
-    name: role.charAt(0).toUpperCase() + role.slice(1), 
+    name: role.charAt(0).toUpperCase() + role.slice(1), // Capitalize role name
     value: roleCounts[role],
   }));
 

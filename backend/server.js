@@ -1,12 +1,22 @@
 import express from 'express';
+import http from 'http'
+import { Server } from 'socket.io';
 import cors from 'cors';
 import dotenv from 'dotenv'
 import mysql from 'mysql2/promise'
 import authRoutes from './routes/auth.js'
 
+
 dotenv.config()
 
 const app =  express();
+const server = http.createServer(app)
+
+const io = new Server(server,{
+    cors:{origin:'*'}
+})
+
+
 app.use(cors());
 app.use(express.json());
 
@@ -14,7 +24,9 @@ const PORT = 5001
 
 app.use('/auth',authRoutes);
 
-
+io.on('connection',(socket)=>{
+    console.log('New client connected:',socket.id)
+})
 
 let pool;
 const connectDB =  async() =>{
@@ -34,6 +46,6 @@ process.exit(1)
 
 connectDB();
 
-app.listen(PORT,()=>console.log(`Server started on : ${PORT}`))
+server.listen(PORT,()=>console.log(`Server started on : ${PORT}`))
 
-export {pool}
+export {pool,io};

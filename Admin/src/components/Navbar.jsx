@@ -1,17 +1,42 @@
 
-import React, { useContext } from "react";
+import React, {useEffect, useContext, useState } from "react";
 import { AuthContext } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import userPlaceholder from "../assets/userr.jpg";
 import "@fortawesome/fontawesome-free/css/all.min.css";
 import userr from "../assets/userr.jpg";
+import { io } from "socket.io-client";
+import toast from "react-hot-toast";
 
 function Navbar({ toggleSidebar }) {
+
+  const [notifications,setNotifications] = useState([])
+  const [showDropdown,setShowDropdown]= useState(false)
+
   const { isLoggedIn, logout, user } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const handleSignIn = () => navigate("/login");
   const handleLogout = () => logout();
+
+  useEffect(() => {
+   const socket = io("http://localhost:5001")
+
+   socket.on("connect",()=>{
+    console.log("Connected to socket server")
+   })
+
+   socket.on ("new-signup",(data)=>{
+    setNotifications((prev)=> [...prev,{message:`New user:${data.name}`}])
+    toast.success( `New user signed up:${data.name}`)
+   })
+    return () => socket.disconnect()
+  }, [])
+
+  const handleNotificationClick =()=>{
+    setShowDropdown((prev) => !prev)
+  }
+  
 
   return (
     <nav
@@ -62,10 +87,40 @@ function Navbar({ toggleSidebar }) {
           <div className="col-8 d-flex align-items-center justify-content-end gap-3">
             <button className="btn btn-outline-secondary">
               <i className="fas fa-envelope"></i>
+              </button>
+            <div className="position-relative" onClick={handleNotificationClick}>
+              <button className="btn btn-outline-secondary">
+                <i className="fas fa-bell"></i>
+              {notifications.length > 0 && (
+                <span className="position-absolute top-0 start-100 translate-middle  p-1 bg-danger border border-light rounded-circle" style={{fontSize:"8px"}}></span>
+              )}
             </button>
-            <button className="btn btn-outline-secondary">
-              <i className="fas fa-bell"></i>
-            </button>
+{showDropdown && (
+  <div className="dropdown-menu show" style={{
+    position:"absolute",
+    right:0,
+    top:"100%",
+    minWidth:"250px",
+    maxHeight:"300px",
+    overflow:"auto",
+    zIndex:1000,
+  }}>
+{notifications.length === 0 ? (
+  <span className="dropdown-item text-muted">No Notifications</span>
+):(
+  notifications.slice().reverse().map((n,i)=>(
+    <span key={i} className="dropdown-item">
+      {n.message}
+    </span>
+  ))
+
+)}
+
+  </div>
+)}
+
+            </div>
+              
 
             {isLoggedIn ? (
               <div className="dropdown">

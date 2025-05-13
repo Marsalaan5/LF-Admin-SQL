@@ -36,6 +36,15 @@ function Sidebar({isOpen}) {
           </li>
           <li className="nav-item mb-2">
             <Link
+              to="/role_management"
+              className="nav-link text-white d-flex align-items-center"
+            >
+              <i className="fas fa-user me-2"></i>
+              <span>Role Management</span>
+            </Link>
+          </li>
+          <li className="nav-item mb-2">
+            <Link
               to="/tables"
               className="nav-link text-white d-flex align-items-center"
             >
