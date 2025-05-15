@@ -1,5 +1,3 @@
-
-
 export const login = (token, user) => {
   localStorage.setItem("token", token);
   localStorage.setItem("user", JSON.stringify(user));
@@ -7,7 +5,7 @@ export const login = (token, user) => {
 
 export const logout = () => {
   localStorage.removeItem("token");
-  localStorage.removeItem("user"); 
+  localStorage.removeItem("user");
 };
 
 export const getToken = () => {
@@ -15,8 +13,6 @@ export const getToken = () => {
 };
 
 export const getUser = () => {
-
   const user = localStorage.getItem("user");
   return user ? JSON.parse(user) : null;
 };
-

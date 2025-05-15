@@ -137,8 +137,21 @@ function UserManagement() {
 
   return (
     <div className="container-fluid mt-5 p-5 border shadow-sm">
-      <div className="container mt-5 p-4 d-flex justify-content-between align-items-center border rounded shadow-sm bg-light">
-        <h4 className="mb-0 fw-semibold text-primary">User Management</h4>
+      <div className="p-4 d-flex justify-content-between align-items-center">
+       
+              <div className="col-sm-6">
+                <h1 className="m-0 text-dark">User Management</h1>
+                <div className="col-sm-6">
+                  <ol className="breadcrumb float-sm-right">
+                    <li className="breadcrumb-item">
+                      <a href="/">Home</a>
+                    </li>
+                    <li className="breadcrumb-item active">User Management</li>
+                  </ol>
+                </div>
+              </div>
+          
+        {/* <h4 className="mb-0 fw-semibold text-primary">User Management</h4> */}
         {/* {user?.role === "admin" && ( */}
         
           <button
@@ -437,7 +450,7 @@ function UserManagement() {
                     {userInTable.role.charAt(0).toUpperCase() +
                       userInTable.role.slice(1)}
                   </td>
-                  <td className="text-center">
+                  {/* <td className="text-center">
                     <button
                       className="btn btn-primary btn-sm"
                       onClick={() => handleEditUser(userInTable)}
@@ -450,7 +463,25 @@ function UserManagement() {
                     >
                       Delete
                     </button>
-                  </td>
+                  </td> */}
+                  <td className="text-center">
+  <button
+    className="btn btn-outline-primary btn-sm"
+    onClick={() => handleEditUser(userInTable)}
+    title="Edit"
+  >
+    <i className="fas fa-edit"></i>
+  </button>
+
+  <button
+    className="btn btn-outline-danger btn-sm ms-2"
+    onClick={() => handleDelete(userInTable.id)}
+    title="Delete"
+  >
+    <i className="fas fa-trash-alt"></i>
+  </button>
+</td>
+
                 </tr>
               ))
             )}

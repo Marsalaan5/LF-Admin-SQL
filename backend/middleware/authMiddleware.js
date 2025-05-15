@@ -1,73 +1,40 @@
-
-import jwt from 'jsonwebtoken';
-import { pool } from '../server.js'; 
-
+import jwt from "jsonwebtoken";
+import { pool } from "../server.js";
 
 export function isAdmin(req, res, next) {
-    if (req.user.role !== 'super admin') {
-      return res.status(403).json({ message: 'Access denied. Admins only.' });
-    }
-    next();
+  if (req.user.role !== "super admin") {
+    return res.status(403).json({ message: "Access denied. Admins only." });
   }
-
-// middleware/isAdmin.js
-// export function isAdmin(req, res, next) {
-//   if (!req.user || !req.user.role) {
-//     return res.status(401).json({ message: 'Unauthorized. User not authenticated.' });
-//   }
-
-//   if (req.user.role.toLowerCase() !== 'admin' && req.user.role.toLowerCase() !== 'super admin') {
-//     return res.status(403).json({ message: 'Access denied. Admins only.' });
-//   }
-
-//   next();
-// }
-
-  
-
-
-
-// export const authenticateToken = async (req, res, next) => {
-//   const token = req.headers.authorization?.split(' ')[1]; 
-
-
-  
-//   if (!token) {
-//     return res.status(401).json({ message: 'Unauthorized' });
-//   }
-
-//   try {
-//     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-//     req.user = decoded; 
-//     next();
-//   } catch (err) {
-//     console.error('Token verification failed:', err);
-//     res.status(401).json({ message: 'Invalid or expired token' });
-//   }
-// };
-
+  next();
+}
 
 export const authenticateToken = async (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
 
-  if (!token) return res.status(401).json({ message: 'Token missing' });
+  if (!token) return res.status(401).json({ message: "Token missing" });
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    const [rows] = await pool.execute("SELECT * FROM login WHERE id = ?", [decoded.id]);
+    const [rows] = await pool.execute("SELECT * FROM login WHERE id = ?", [
+      decoded.id,
+    ]);
 
-    if (rows.length === 0) return res.status(401).json({ message: 'User not found' });
+    if (rows.length === 0)
+      return res.status(401).json({ message: "User not found" });
 
     const user = rows[0];
 
     let permissions = {};
     if (user.role) {
-      const [roleRows] = await pool.execute("SELECT * FROM roles WHERE name = ?", [user.role]);
+      const [roleRows] = await pool.execute(
+        "SELECT * FROM roles WHERE name = ?",
+        [user.role]
+      );
       if (roleRows.length > 0) {
         try {
-          permissions = JSON.parse(roleRows[0].permissions || '{}');
+          permissions = JSON.parse(roleRows[0].permissions || "{}");
         } catch {
           permissions = {};
         }
@@ -84,6 +51,6 @@ export const authenticateToken = async (req, res, next) => {
     next();
   } catch (err) {
     console.error(err);
-    res.status(403).json({ message: 'Invalid token' });
+    res.status(403).json({ message: "Invalid token" });
   }
 };
