@@ -163,22 +163,20 @@ router.post("/login", async (req, res) => {
     );
 
     // Fetch permissions based on the user's role_id
-const [permissionRows] = await pool.execute(
-  "SELECT permissions FROM roles WHERE id = ?",
-  [roleId]
-);
+    const [permissionRows] = await pool.execute(
+      "SELECT permissions FROM roles WHERE id = ?",
+      [roleId]
+    );
 
-let permissions = {};
-if (permissionRows.length > 0) {
-  try {
-    permissions = JSON.parse(permissionRows[0].permissions || "{}");
-  } catch (error) {
-    console.error("Error parsing permissions JSON:", error);
-    permissions = {};
-  }
-}
-
-
+    let permissions = {};
+    if (permissionRows.length > 0) {
+      try {
+        permissions = JSON.parse(permissionRows[0].permissions || "{}");
+      } catch (error) {
+        console.error("Error parsing permissions JSON:", error);
+        permissions = {};
+      }
+    }
 
     const now = new Date();
 
@@ -210,110 +208,6 @@ if (permissionRows.length > 0) {
     res.status(500).json({ message: "Something went wrong" });
   }
 });
-
-// router.post("/register", upload.single("image"), async (req, res) => {
-//   if (req.fileValidationError) {
-//     return res.status(400).json({ message: req.fileValidationError });
-//   }
-
-//   const { name, email, password, role = "user", status = "active" } = req.body;
-//   const image = req.file ? req.file.path : null;
-//   const token = req.headers.authorization?.split(" ")[1];
-
-//   try {
-//     const [existingUser] = await pool.execute(
-//       "SELECT * FROM login WHERE email = ?",
-//       [email]
-//     );
-
-//     if (existingUser.length > 0) {
-//       return res.status(400).json({ message: "User already exists" });
-//     }
-
-//     const salt = await bcrypt.genSalt(10);
-//     const hashedPassword = await bcrypt.hash(password, salt);
-
-//     const [result] = await pool.execute(
-//       "INSERT INTO login (name, email, password, role_id,role, image, insert_time,status) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP , ?)",
-//       [name, email, hashedPassword, role_id ,role, image, status]
-//     );
-//     console.log("Audit INSERT result:", result);
-
-//     io.emit('new-signup', { name, email });
-
-//     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-//     const adminId = decoded.id;
-//     await logAudit(adminId, "INSERT", result.insertId, null, {
-//   name,
-//   email,
-//   role_id: roleId,
-//   role,
-//   image,
-//   status,
-// });
-
-//     res.status(201).json({
-//       message: "User registered successfully",
-//       userId: result.insertId,
-//     });
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ message: "Something went wrong" });
-//   }
-// });
-
-// router.post("/login", async (req, res) => {
-//   const { email, password } = req.body;
-//   try {
-//     const [userRows] = await pool.execute(
-//       "SELECT * FROM login WHERE email = ?",
-//       [email]
-//     );
-
-//     if (userRows.length === 0) {
-//       return res.status(400).json({ message: "Invalid email or password" });
-//     }
-
-//     const user = userRows[0];
-
-//     const isMatch = await bcrypt.compare(password, user.password);
-//     if (!isMatch) {
-//       return res.status(401).json({ message: "Invalid email or password" });
-//     }
-
-//     const token = jwt.sign(
-//       { id: user.id, email: user.email, role: user.role },
-//       process.env.JWT_SECRET,
-//       { expiresIn: "1d" }
-//     );
-
-//     const now = new Date();
-
-//     await pool.execute(
-//       "UPDATE login SET token = ?, last_login = ? WHERE id = ?",
-//       [token, now, user.id]
-//     );
-
-//     await logAudit(user.id, "LOGIN", user.id, null, {
-//       login_time: now,
-//     });
-
-//     res.status(200).json({
-//       message: "Login successful",
-//       token,
-//       result: {
-//         id: user.id,
-//         name: user.name,
-//         email: user.email,
-//         role: user.role,
-//         last_login: now,
-//       },
-//     });
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ message: "Something went wrong" });
-//   }
-// });
 
 router.get(
   "/dashboard/stats",
@@ -390,8 +284,15 @@ router.put(
   checkPermission("user_management", "edit"),
   async (req, res) => {
     const { id } = req.params;
-    const { name, email, password, role_id,role, image, status } = req.body;
-    console.log("Received data for update:", { name, email, role_id, role, image, status });
+    const { name, email, password, role_id, role, image, status } = req.body;
+    console.log("Received data for update:", {
+      name,
+      email,
+      role_id,
+      role,
+      image,
+      status,
+    });
     const token = req.headers.authorization?.split(" ")[1];
 
     try {
@@ -404,16 +305,16 @@ router.put(
       }
 
       const oldData = user[0];
-          // const roleId = role_id;
+      // const roleId = role_id;
 
       const hashedPassword = password
         ? await bcrypt.hash(password, 10)
         : oldData.password;
 
-         const roleId = parseInt(role_id, 10);
+      const roleId = parseInt(role_id, 10);
       const [result] = await pool.execute(
         "UPDATE login SET name = ?, email = ?, password = ?, role_id = ?, role = ?, image = ?, status = ? WHERE id = ?",
-        [name, email, hashedPassword, roleId,role, image, status, id]
+        [name, email, hashedPassword, roleId, role, image, status, id]
       );
       console.log("Updated user:", result);
 
@@ -426,7 +327,7 @@ router.put(
       await logAudit(adminId, "UPDATE", id, oldData, {
         name,
         email,
-        role_id:roleId,
+        role_id: roleId,
         role,
         image,
         status,
@@ -439,8 +340,6 @@ router.put(
     }
   }
 );
-
-
 
 router.delete(
   "/users/:id",

@@ -93,8 +93,15 @@ function UserManagement() {
     }
   };
 
+  // const handleEditUser = (user) => {
+  //   setEditUser(user);
+  // };
+
   const handleEditUser = (user) => {
-    setEditUser(user);
+    setEditUser({
+      ...user,
+      role_id: roles.find((r) => r.name === user.role)?.id || "",
+    });
   };
 
   const handleUpdateUser = async (e) => {
@@ -138,29 +145,28 @@ function UserManagement() {
   return (
     <div className="container-fluid mt-5 p-5 border shadow-sm">
       <div className="p-4 d-flex justify-content-between align-items-center">
-       
-              <div className="col-sm-6">
-                <h1 className="m-0 text-dark">User Management</h1>
-                <div className="col-sm-6">
-                  <ol className="breadcrumb float-sm-right">
-                    <li className="breadcrumb-item">
-                      <a href="/">Home</a>
-                    </li>
-                    <li className="breadcrumb-item active">User Management</li>
-                  </ol>
-                </div>
-              </div>
-          
+        <div className="col-sm-6">
+          <h1 className="m-0 text-dark">User Management</h1>
+          <div className="col-sm-6">
+            <ol className="breadcrumb float-sm-right">
+              <li className="breadcrumb-item">
+                <a href="/">Home</a>
+              </li>
+              <li className="breadcrumb-item active">User Management</li>
+            </ol>
+          </div>
+        </div>
+
         {/* <h4 className="mb-0 fw-semibold text-primary">User Management</h4> */}
         {/* {user?.role === "admin" && ( */}
-        
-          <button
-            className="btn btn-success d-flex align-items-center"
-            data-bs-toggle="modal"
-            data-bs-target="#addUserModal"
-          >
-            <i className="fas fa-plus me-2"></i> Add User
-          </button>
+
+        <button
+          className="btn btn-success d-flex align-items-center"
+          data-bs-toggle="modal"
+          data-bs-target="#addUserModal"
+        >
+          <i className="fas fa-plus me-2"></i> Add User
+        </button>
         {/* )} */}
       </div>
 
@@ -334,12 +340,27 @@ function UserManagement() {
                       />
                     </div>
                     <div className="col-md-6">
-                      <select
+                      {/* <select
                         className="form-control"
                         value={editUser.role}
                         onChange={(e) =>
                           setEditUser({ ...editUser, role: e.target.value })
                         }
+                        required
+                      > */}
+                      <select
+                        className="form-control"
+                        value={editUser.role}
+                        onChange={(e) => {
+                          const selectedRole = roles.find(
+                            (r) => r.name === e.target.value
+                          );
+                          setEditUser({
+                            ...editUser,
+                            role: selectedRole.name,
+                            role_id: selectedRole.id,
+                          });
+                        }}
                         required
                       >
                         <option value="">Select Role</option>
@@ -465,23 +486,22 @@ function UserManagement() {
                     </button>
                   </td> */}
                   <td className="text-center">
-  <button
-    className="btn btn-outline-primary btn-sm"
-    onClick={() => handleEditUser(userInTable)}
-    title="Edit"
-  >
-    <i className="fas fa-edit"></i>
-  </button>
+                    <button
+                      className="btn btn-outline-primary btn-sm"
+                      onClick={() => handleEditUser(userInTable)}
+                      title="Edit"
+                    >
+                      <i className="fas fa-edit"></i>
+                    </button>
 
-  <button
-    className="btn btn-outline-danger btn-sm ms-2"
-    onClick={() => handleDelete(userInTable.id)}
-    title="Delete"
-  >
-    <i className="fas fa-trash-alt"></i>
-  </button>
-</td>
-
+                    <button
+                      className="btn btn-outline-danger btn-sm ms-2"
+                      onClick={() => handleDelete(userInTable.id)}
+                      title="Delete"
+                    >
+                      <i className="fas fa-trash-alt"></i>
+                    </button>
+                  </td>
                 </tr>
               ))
             )}

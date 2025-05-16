@@ -142,7 +142,6 @@ const pathnames = location.pathname.split("/").filter((x) => x);
     );
   }
 
-  // Add these states
 
   // Filter logic
   const filteredUsers = users.filter((user) => {
