@@ -2,7 +2,7 @@ import React, { useEffect, useState, useContext } from "react";
 import axios from "axios";
 import { AuthContext } from "../context/AuthContext"; // Import your AuthContext
 
-const RolesManagement = () => {
+function RolesManagement() {
   const { token } = useContext(AuthContext); // Get token from context
   const [roles, setRoles] = useState([]);
   const [name, setName] = useState("");
@@ -178,8 +178,8 @@ const RolesManagement = () => {
     //     </button>
     //   </div>
 
-     <div className="container-fluid mt-5 p-5 border shadow-sm">
-      <div className="  p-4 d-flex justify-content-between align-items-center">
+     <div className="container-fluid mt-5 p-2 border shadow-sm">
+      <div className=" p-4 d-flex justify-content-between align-items-center">
          <div className="col-sm-6">
                 <h1 className="m-0 text-dark">Role Management</h1>
                 <div className="col-sm-6">

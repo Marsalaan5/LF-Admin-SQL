@@ -19,6 +19,8 @@ function UserManagement() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [editUser, setEditUser] = useState(null);
+  const [excelFile,setExcelFile] = useState(null)
+
   const navigate = useNavigate();
 
   const [page, setPage] = useState(1);
@@ -90,6 +92,7 @@ function UserManagement() {
       setMessage(err?.response?.data?.message || "Error adding user");
     } finally {
       setLoading(false);
+    
     }
   };
 
@@ -142,8 +145,58 @@ function UserManagement() {
     }
   };
 
+  const handleExcelUpload = async(e) =>{
+    e.preventDefault()
+    if(!excelFile) return
+
+    const formData = new FormData()
+    formData.append("file",excelFile)
+    setLoading(true)
+    setMessage("")
+    try {
+      await axios.post("http://localhost:5001/auth/users/import/excel", formData, {
+       headers:{
+        Authorization:`Bearer ${token}`,
+        "Content-Type" : "multipart/form-data"
+       },
+       });
+       setMessage("Excel file imported successfully!")
+       setExcelFile(null)
+       fetchUsers()
+       
+    } catch (error) {
+console.error("Excel import failed:",error)      
+setMessage(error?.response?.data?.message || "Error importing Excel file")
+    }finally{
+      setLoading(false)
+    }
+  }
+
+  const handleExcelExport = async () => {
+  try {
+    const response = await axios.get("http://localhost:5001/auth/users/export/excel", {
+      headers: { Authorization: `Bearer ${token}` },
+      responseType: "blob",
+    });
+
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", "users.xlsx");
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    setMessage("Excel exported successfully!");
+  } catch (error) {
+    console.error("Export failed:", error);
+    setMessage("Error exporting Excel file.");
+  }
+};
+
+
   return (
-    <div className="container-fluid mt-5 p-5 border shadow-sm">
+    <div className="container-fluid mt-5 p-2 border shadow-sm">
       <div className="p-4 d-flex justify-content-between align-items-center">
         <div className="col-sm-6">
           <h1 className="m-0 text-dark">User Management</h1>
@@ -159,6 +212,33 @@ function UserManagement() {
 
         {/* <h4 className="mb-0 fw-semibold text-primary">User Management</h4> */}
         {/* {user?.role === "admin" && ( */}
+
+
+<form
+  onSubmit={handleExcelUpload}
+  encType="multipart/form-data"
+  className="d-flex align-items-center "
+>
+  <input
+    type="file"
+    accept=".xlsx, .xls"
+    onChange={(e) => setExcelFile(e.target.files[0])}
+    className="form-control me-2"
+    required
+  />
+ 
+</form>
+ <button type="submit" className="btn btn-outline-primary ms-2">
+    <i className="fas fa-file-import me-2"></i> Import Excel
+  </button>
+
+<button
+  className="btn btn-outline-success ms-2"
+  onClick={handleExcelExport}
+>
+  <i className="fas fa-file-export me-2"></i> Export Excel
+</button>
+
 
         <button
           className="btn btn-success d-flex align-items-center"

@@ -9,10 +9,19 @@ import path from "path";
 import moduleConfig from "../config/moduleConfig.js";
 
 import { checkPermission } from "../middleware/checkPermission.js";
-// import { permission } from "process";
+
+import fs from "fs";
+import csv from "csv-parser";
+import { Parser } from "json2csv";
+import XLSX from "xlsx";
+
+
+
 
 const router = express.Router();
 
+
+//image uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, "uploads/");
@@ -209,6 +218,63 @@ router.post("/login", async (req, res) => {
   }
 });
 
+//routes for profile
+
+router.get("/profile", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const [userRows] = await pool.execute(
+      "SELECT id, name, email, image FROM login WHERE id = ?",
+      [userId]
+    );
+
+    if (userRows.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json(userRows[0]);
+  } catch (err) {
+    console.error("Profile fetch error:", err);
+    res.status(500).json({ message: "Failed to fetch profile" });
+  }
+});
+
+router.put("/profile", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { name, email, password } = req.body;
+
+    if (!name || !email) {
+      return res.status(400).json({ message: "Name and email are required" });
+    }
+
+    const [existingUser] = await pool.execute(
+      "SELECT * FROM login WHERE id = ?",
+      [userId]
+    );
+    if (existingUser.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const hashedPassword = password
+      ? await bcrypt.hash(password, 10)
+      : existingUser[0].password;
+
+    await pool.execute(
+      "UPDATE login SET name = ?, email = ?, password = ? WHERE id = ?",
+      [name, email, hashedPassword, userId]
+    );
+
+    res.status(200).json({ message: "Profile updated successfully" });
+  } catch (err) {
+    console.error("Profile update error:", err);
+    res.status(500).json({ message: "Failed to update profile" });
+  }
+});
+
+//dashboard route
+
 router.get(
   "/dashboard/stats",
   authenticateToken,
@@ -380,6 +446,195 @@ router.delete(
     }
   }
 );
+
+
+//csv import
+
+// Import users from CSV
+
+router.post(
+  "/users/import",
+  authenticateToken,
+  checkPermission("user_management", "import"),
+  upload.single("file"),
+  async (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ message: "CSV file is required" });
+    }
+
+    const results = [];
+    const filePath = req.file.path;
+
+    fs.createReadStream(filePath)
+      .pipe(csv())
+      .on("data", (data) => results.push(data))
+      .on("end", async () => {
+        try {
+          for (const user of results) {
+            const { name, email, password, role, status = "active" } = user;
+
+            const [roleRow] = await pool.execute(
+              "SELECT id FROM roles WHERE name = ?",
+              [role]
+            );
+            if (roleRow.length === 0) continue;
+
+            const roleId = roleRow[0].id;
+            const hashedPassword = await bcrypt.hash(password, 10);
+
+            await pool.execute(
+              "INSERT INTO login (name, email, password, role_id, role, insert_time, status) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)",
+              [name, email, hashedPassword, roleId, role, status]
+            );
+          }
+
+          fs.unlinkSync(filePath);
+          res.status(200).json({ message: "Users imported successfully" });
+        } catch (err) {
+          console.error(err);
+          res.status(500).json({ message: "Import failed" });
+        }
+      });
+  }
+);
+
+
+
+//search 
+
+// Search users by name or role
+router.get("/search", authenticateToken, async (req, res) => {
+  const searchTerm = req.query.q;
+
+  if (!searchTerm || searchTerm.trim() === "") {
+    return res.status(400).json({ message: "Search term is required" });
+  }
+
+  try {
+    const [results] = await pool.execute(
+      `SELECT id, name, email, role, role_id, image, status
+       FROM login
+       WHERE name LIKE ? OR role LIKE ?`,
+      [`%${searchTerm}%`, `%${searchTerm}%`]
+    );
+
+    res.status(200).json(results);
+  } catch (err) {
+    console.error("Search error:", err);
+    res.status(500).json({ message: "Failed to perform search" });
+  }
+});
+
+
+
+// Export users to CSV
+router.get(
+  "/users/export/csv",
+  authenticateToken,
+  checkPermission("user_management", "export"),
+  async (req, res) => {
+    try {
+      const [users] = await pool.execute(
+        "SELECT id, name, email, role, status FROM login"
+      );
+
+      const parser = new Parser();
+      const csvData = parser.parse(users);
+
+      res.header("Content-Type", "text/csv");
+      res.attachment("users.csv");
+      res.send(csvData);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Export failed" });
+    }
+  }
+);
+
+
+// Import users from Excel
+router.post(
+  "/users/import/excel",
+  authenticateToken,
+  checkPermission("user_management", "import"),
+  upload.single("file"),
+  async (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ message: "Excel file is required" });
+    }
+
+    const filePath = req.file.path;
+
+    try {
+      
+      const workbook = XLSX.readFile(filePath);
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+
+      const users = XLSX.utils.sheet_to_json(sheet);
+
+      for (const user of users) {
+        const { name, email, password, role, status = "active" } = user;
+
+        if (!name || !email || !password || !role) continue;
+
+        const [roleRow] = await pool.execute(
+          "SELECT id FROM roles WHERE name = ?",
+          [role]
+        );
+        if (roleRow.length === 0) continue;
+
+        const roleId = roleRow[0].id;
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        await pool.execute(
+          "INSERT INTO login (name, email, password, role_id, role, insert_time, status) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)",
+          [name, email, hashedPassword, roleId, role, status]
+        );
+      }
+
+      fs.unlinkSync(filePath);
+      res.status(200).json({ message: "Users imported from Excel successfully" });
+    } catch (err) {
+      console.error("Excel import error:", err);
+      res.status(500).json({ message: "Excel import failed" });
+    }
+  }
+);
+
+
+//excel export 
+
+
+
+router.get("/users/export/excel", authenticateToken, async (req, res) => {
+  try {
+    const [allUsers] = await pool.execute(
+      "SELECT id, name, email, status, role FROM login"
+    );
+
+    const worksheet = XLSX.utils.json_to_sheet(allUsers);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Users");
+
+    const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+
+    res.setHeader("Content-Disposition", "attachment; filename=users.xlsx");
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.send(buffer);
+  } catch (err) {
+    console.error("Error exporting users:", err);
+    res.status(500).json({ message: "Failed to export users" });
+  }
+});
+
+
+
+
+//modules 
 
 router.get("/modules", async (req, res) => {
   try {

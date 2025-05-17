@@ -19,6 +19,7 @@ import { AuthContext } from "./context/AuthContext.jsx";
 import UserManagement from "./pages/UserManagement.jsx";
 import RoleManagement from "./pages/RoleManagement.jsx";
 import AuthLayout from "./pages/AuthLayout.jsx";
+import Profile from "./pages/Profile.jsx";
 
 function App() {
   const { isLoggedIn } = useContext(AuthContext);
@@ -28,6 +29,8 @@ function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/profile" element={<Profile />} />
+        {/* <Route path="/user/:id" element={<Profile />} /> */}
 
         {isLoggedIn ? (
           <>
