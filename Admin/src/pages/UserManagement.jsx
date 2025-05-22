@@ -19,7 +19,7 @@ function UserManagement() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [editUser, setEditUser] = useState(null);
-  const [excelFile,setExcelFile] = useState(null)
+  const [excelFile, setExcelFile] = useState(null);
 
   const navigate = useNavigate();
 
@@ -92,7 +92,6 @@ function UserManagement() {
       setMessage(err?.response?.data?.message || "Error adding user");
     } finally {
       setLoading(false);
-    
     }
   };
 
@@ -106,6 +105,7 @@ function UserManagement() {
       role_id: roles.find((r) => r.name === user.role)?.id || "",
     });
   };
+
 
   const handleUpdateUser = async (e) => {
     e.preventDefault();
@@ -145,55 +145,31 @@ function UserManagement() {
     }
   };
 
-  const handleExcelUpload = async(e) =>{
-    e.preventDefault()
-    if(!excelFile) return
-
-    const formData = new FormData()
-    formData.append("file",excelFile)
-    setLoading(true)
-    setMessage("")
-    try {
-      await axios.post("http://localhost:5001/auth/users/import/excel", formData, {
-       headers:{
-        Authorization:`Bearer ${token}`,
-        "Content-Type" : "multipart/form-data"
-       },
-       });
-       setMessage("Excel file imported successfully!")
-       setExcelFile(null)
-       fetchUsers()
-       
-    } catch (error) {
-console.error("Excel import failed:",error)      
-setMessage(error?.response?.data?.message || "Error importing Excel file")
-    }finally{
-      setLoading(false)
-    }
-  }
 
   const handleExcelExport = async () => {
-  try {
-    const response = await axios.get("http://localhost:5001/auth/users/export/excel", {
-      headers: { Authorization: `Bearer ${token}` },
-      responseType: "blob",
-    });
+    try {
+      const response = await axios.get(
+        "http://localhost:5001/auth/users/export/excel",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          responseType: "blob",
+        }
+      );
 
-    const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", "users.xlsx");
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "users.xlsx");
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
 
-    setMessage("Excel exported successfully!");
-  } catch (error) {
-    console.error("Export failed:", error);
-    setMessage("Error exporting Excel file.");
-  }
-};
-
+      setMessage("Excel exported successfully!");
+    } catch (error) {
+      console.error("Export failed:", error);
+      setMessage("Error exporting Excel file.");
+    }
+  };
 
   return (
     <div className="container-fluid mt-5 p-2 border shadow-sm">
@@ -213,41 +189,26 @@ setMessage(error?.response?.data?.message || "Error importing Excel file")
         {/* <h4 className="mb-0 fw-semibold text-primary">User Management</h4> */}
         {/* {user?.role === "admin" && ( */}
 
+    
+       
+<div className="d-flex gap-3">
 
-<form
-  onSubmit={handleExcelUpload}
-  encType="multipart/form-data"
-  className="d-flex align-items-center "
->
-  <input
-    type="file"
-    accept=".xlsx, .xls"
-    onChange={(e) => setExcelFile(e.target.files[0])}
-    className="form-control me-2"
-    required
-  />
- 
-</form>
- <button type="submit" className="btn btn-outline-primary ms-2">
-    <i className="fas fa-file-import me-2"></i> Import Excel
-  </button>
-
-<button
-  className="btn btn-outline-success ms-2"
-  onClick={handleExcelExport}
->
-  <i className="fas fa-file-export me-2"></i> Export Excel
-</button>
-
+        <button
+          className="btn btn-outline-success ms-2"
+          onClick={handleExcelExport}
+        >
+          <i className="fas fa-file-export me-2"></i> Export Excel
+        </button>
 
         <button
           className="btn btn-success d-flex align-items-center"
           data-bs-toggle="modal"
           data-bs-target="#addUserModal"
-        >
+          >
           <i className="fas fa-plus me-2"></i> Add User
         </button>
         {/* )} */}
+          </div>
       </div>
 
       <div
@@ -518,7 +479,20 @@ setMessage(error?.response?.data?.message || "Error importing Excel file")
                 <tr key={userInTable.id}>
                   <td>{userInTable.id}</td>
                   {/* <td>{indexOfFirstUser + index + 1}</td> */}
-                  <td className="fw-semibold">
+                  {/* <td className="fw-semibold">
+                    {userInTable.name
+                      .toLowerCase()
+                      .split(" ")
+                      .map(
+                        (word) => word.charAt(0).toUpperCase() + word.slice(1)
+                      )
+                      .join(" ")}
+                  </td> */}
+                  <td
+                    className="fw-semibold text-primary"
+                    style={{ cursor: "pointer" }}
+                    onClick={() => navigate(`/users/${userInTable.id}`)}
+                  >
                     {userInTable.name
                       .toLowerCase()
                       .split(" ")

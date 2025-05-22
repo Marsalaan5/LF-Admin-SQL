@@ -476,38 +476,41 @@ function Dashboard() {
       return "unknown";
     }
 
-    console.log("Roles:", roles); // Log roles for debugging
-    console.log("Searching for Role ID:", roleId); // Log roleId being searched for
+    console.log("Roles:", roles); 
+    console.log("Searching for Role ID:", roleId); 
 
-    const role = roles.find((r) => String(r.id) === String(roleId)); // Adjust `r.id` if necessary
+    const role = roles.find((r) => String(r.id) === String(roleId)); 
 
     if (!role) {
       console.warn(`Role not found for ID: ${roleId}`);
     }
 
     console.log(`Role matched for ID ${roleId}: ${role ? role.name : "unknown"}`);
-    return role ? role.name.toLowerCase() : "unknown";
+    return role ? role.name : "unknown";
   };
+  console.log("All roles:", roles);
 
   // Filter logic
   const filteredUsers = users.filter((user) => {
     const nameOrEmailMatch =
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const statusMatch = filterStatus ? user.status === filterStatus : true;
+      
+      const roleName = getRoleName(user.roleId);
+      // const roleMatch = filterRole ? roleName === filterRole : true;
+      const roleMatch = filterRole ? user.roleId === parseInt(filterRole) : true;
 
-    const statusMatch = filterStatus ? user.status === filterStatus : true;
-
-    const roleName = getRoleName(user.roleId);
-    const roleMatch = filterRole ? roleName === filterRole : true;
-
-    const userDate = new Date(user.createdAt);
-    const dateMatch =
+      
+      const userDate = new Date(user.createdAt);
+      const dateMatch =
       (!startDate || userDate >= startDate) &&
       (!endDate || userDate <= endDate);
-
-    return nameOrEmailMatch && statusMatch && roleMatch && dateMatch;
-  });
-
+      
+      return nameOrEmailMatch && statusMatch && roleMatch && dateMatch;
+    });
+    
   return (
     <div className="container-fluid mt-5 p-2">
       <div className="p-4 row mb-2">
@@ -556,9 +559,10 @@ function Dashboard() {
 >
   <option value="">All Roles</option>
   {roles?.map((role) => (
-  <option key={role.id} value={role.name.toLowerCase()}>
+  <option key={role.id} value={role.id}>
     {role.name}
   </option>
+
 ))}
 
 </select>
@@ -717,7 +721,7 @@ function Dashboard() {
         </div>
 
         {/* Role Breakdown */}
-        {["superadmin", "admin", "user"].map((roleKey) => (
+        {/* {["Super Admin", "Admin", "User"].map((roleKey) => (
           <div className="col-lg-3 col-md-4 col-sm-6 mb-4" key={roleKey}>
             <div className="card-stats card">
               <div className="card-body">
@@ -750,7 +754,34 @@ function Dashboard() {
               </div>
             </div>
           </div>
-        ))}
+        ))} */}
+        {roles?.map((role) => (
+  <div className="col-lg-3 col-md-4 col-sm-6 mb-4" key={role.id}>
+    <div className="card-stats card">
+      <div className="card-body">
+        <div className="row">
+          <div className="col-12">
+            <div className="numbers">
+              <p className="card-category">{role.name}</p>
+              <h4 className="card-title">
+                {
+                  filteredUsers.filter((user) => user.roleId === role.id).length
+                }
+              </h4>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="card-footer">
+        <hr />
+        <div className="stats" onClick={fetchUsersAndRoles} style={{ cursor: "pointer" }}>
+          <i className="fas fa-sync-alt mr-1"></i> Update now
+        </div>
+      </div>
+    </div>
+  </div>
+))}
+
       </div>
 
       {/* Chart */}

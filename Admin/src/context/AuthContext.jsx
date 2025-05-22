@@ -64,7 +64,7 @@ const AuthProvider = ({ children }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [token, setToken] = useState(null);
   const [user, setUser] = useState(null);
-  const [permissions, setPermissions] = useState([]);  // Default to an empty array
+  const [permissions, setPermissions] = useState([]); 
 
   useEffect(() => {
     const storedToken = localStorage.getItem("token");
@@ -76,7 +76,7 @@ const AuthProvider = ({ children }) => {
       setToken(storedToken);
       
       try {
-        // Try parsing storedPermissions, default to empty array if invalid
+       
         const parsedPermissions = JSON.parse(storedPermissions);
         setPermissions(parsedPermissions || []);
       } catch (error) {
@@ -110,7 +110,7 @@ const AuthProvider = ({ children }) => {
     localStorage.removeItem("permissions");
     setUser(null);
     setToken(null);
-    setPermissions([]);  // Reset to an empty array
+    setPermissions([]); 
     setIsLoggedIn(false);
   };
 

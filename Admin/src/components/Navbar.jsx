@@ -362,7 +362,7 @@
 
 import React, { useEffect, useContext, useState } from "react";
 import { AuthContext } from "../context/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate,Link } from "react-router-dom";
 import userPlaceholder from "../assets/userr.jpg";
 import userr from "../assets/userr.jpg";
 import { io } from "socket.io-client";
@@ -459,12 +459,21 @@ const handleSearchChange = (e) => {
         <div className="d-none d-md-flex justify-content-between align-items-center w-100">
           {/* Column 1: Avatar & Title */}
           <div className="d-flex align-items-center gap-2">
-            <img
+            {/* <img
+           
               src={userr}
               alt="admin"
               className="rounded-circle"
               style={{ width: "40px", height: "40px", objectFit: "cover" }}
-            />
+            /> */}
+            <Link to="/">
+  <img
+    src={userr}
+    alt="admin"
+    className="rounded-circle"
+    style={{ width: "40px", height: "40px", objectFit: "cover", cursor: "pointer" }}
+  />
+</Link>
             <h5 className="mb-0 fw-semibold text-dark">Admin</h5>
 
              <div className="d-flex align-items-center gap-3" style={{marginLeft:"99px"}}>

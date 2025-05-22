@@ -4,27 +4,42 @@ import express from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { pool, io } from "../server.js";
-import { authenticateToken } from "../middleware/authMiddleware.js";
-import path from "path";
+import { authenticateToken, isAdmin } from "../middleware/authMiddleware.js";
 import moduleConfig from "../config/moduleConfig.js";
 
 import { checkPermission } from "../middleware/checkPermission.js";
 
 import fs from "fs";
+import path from "path";
 import csv from "csv-parser";
 import { Parser } from "json2csv";
 import XLSX from "xlsx";
 
+import { fileURLToPath } from 'url';
+// import path from 'path';
 
+
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 
 const router = express.Router();
 
 
+const uploadDir = path.join(__dirname, 'uploads');
+
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir);
+  console.log('Created uploads directory.');
+}
+
 //image uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/");
+    // cb(null, "uploads/");
+    cb(null, uploadDir);
+
   },
   filename: (req, file, cb) => {
     cb(null, Date.now() + "-" + file.originalname);
@@ -46,6 +61,30 @@ const upload = multer({
     return cb(new Error("Only image files are allowed."));
   },
 });
+
+// Function to organize the menu into a hierarchical structure
+function organizeMenu(menuItems) {
+  const organizedMenu = [];
+  const map = {};
+  
+  // Create a map of all menu items for easy reference by ID
+  menuItems.forEach((item) => {
+    map[item.id] = { ...item, children: [] };
+  });
+  
+  // Now organize the menu into a tree structure
+  menuItems.forEach((item) => {
+    if (item.parent_id === null) {
+      organizedMenu.push(map[item.id]);
+    } else {
+      if (map[item.parent_id]) {
+        map[item.parent_id].children.push(map[item.id]);
+      }
+    }
+  });
+  
+  return organizedMenu;
+}
 
 const logAudit = async (
   adminId,
@@ -77,6 +116,7 @@ const logAudit = async (
   }
 };
 
+router.use("/uploads", express.static(uploadDir));
 // GET /modules
 router.get("/modules", (req, res) => {
   res.json(moduleConfig);
@@ -278,7 +318,7 @@ router.put("/profile", authenticateToken, async (req, res) => {
 router.get(
   "/dashboard/stats",
   authenticateToken,
-  checkPermission("dashboard", "view"),
+  checkPermission("dashboard", "enable", "view"),
   async (req, res) => {
     try {
       const [users] = await pool.execute("SELECT id, role, status FROM login");
@@ -316,7 +356,7 @@ router.get(
 router.get(
   "/users",
   authenticateToken,
-  checkPermission("user_management", "view"),
+  checkPermission("user_management","enable", "view"),
   async (req, res) => {
     const token = req.headers.authorization?.split(" ")[1];
 
@@ -338,16 +378,51 @@ router.get(
   }
 );
 
+router.get("/users/:id", authenticateToken, isAdmin, async (req, res) => {
+  const userId = parseInt(req.params.id);
+
+  // Basic input validation
+  if (isNaN(userId)) {
+    return res.status(400).json({ message: "Invalid user ID" });
+  }
+
+  try {
+    const [rows] = await pool.execute(
+      `SELECT id, name, email, role_id, role, image, status, insert_time AS insertTime, 
+              last_login AS lastLogin 
+       FROM login 
+       WHERE id = ?`,
+      [userId]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const user = rows[0];
+
+    // Optional: Prevent users from viewing others’ profiles (unless admin)
+    // if (req.user.role !== 'superadmin' && req.user.id !== userId) {
+    //   return res.status(403).json({ message: 'Access denied' });
+    // }
+
+    res.status(200).json({ user });
+  } catch (error) {
+    console.error("Error fetching user profile:", error);
+    res.status(500).json({ message: "Failed to fetch user profile" });
+  }
+});
+
 router.post(
   "/users",
-  checkPermission("user_management", "create"),
+  checkPermission("user_management","enable","create"),
   async (req, res) => {}
 );
 
 router.put(
   "/users/:id",
   authenticateToken,
-  checkPermission("user_management", "edit"),
+  checkPermission("user_management","enable", "edit"),
   async (req, res) => {
     const { id } = req.params;
     const { name, email, password, role_id, role, image, status } = req.body;
@@ -410,7 +485,7 @@ router.put(
 router.delete(
   "/users/:id",
   authenticateToken,
-  checkPermission("user_management", "delete"),
+  checkPermission("user_management","enable", "delete"),
   async (req, res) => {
     const { id } = req.params;
     const token = req.headers.authorization?.split(" ")[1];
@@ -447,61 +522,6 @@ router.delete(
   }
 );
 
-
-//csv import
-
-// Import users from CSV
-
-router.post(
-  "/users/import",
-  authenticateToken,
-  checkPermission("user_management", "import"),
-  upload.single("file"),
-  async (req, res) => {
-    if (!req.file) {
-      return res.status(400).json({ message: "CSV file is required" });
-    }
-
-    const results = [];
-    const filePath = req.file.path;
-
-    fs.createReadStream(filePath)
-      .pipe(csv())
-      .on("data", (data) => results.push(data))
-      .on("end", async () => {
-        try {
-          for (const user of results) {
-            const { name, email, password, role, status = "active" } = user;
-
-            const [roleRow] = await pool.execute(
-              "SELECT id FROM roles WHERE name = ?",
-              [role]
-            );
-            if (roleRow.length === 0) continue;
-
-            const roleId = roleRow[0].id;
-            const hashedPassword = await bcrypt.hash(password, 10);
-
-            await pool.execute(
-              "INSERT INTO login (name, email, password, role_id, role, insert_time, status) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)",
-              [name, email, hashedPassword, roleId, role, status]
-            );
-          }
-
-          fs.unlinkSync(filePath);
-          res.status(200).json({ message: "Users imported successfully" });
-        } catch (err) {
-          console.error(err);
-          res.status(500).json({ message: "Import failed" });
-        }
-      });
-  }
-);
-
-
-
-//search 
-
 // Search users by name or role
 router.get("/search", authenticateToken, async (req, res) => {
   const searchTerm = req.query.q;
@@ -525,13 +545,11 @@ router.get("/search", authenticateToken, async (req, res) => {
   }
 });
 
-
-
 // Export users to CSV
 router.get(
   "/users/export/csv",
   authenticateToken,
-  checkPermission("user_management", "export"),
+  checkPermission("user_management","enable", "export"),
   async (req, res) => {
     try {
       const [users] = await pool.execute(
@@ -551,61 +569,7 @@ router.get(
   }
 );
 
-
-// Import users from Excel
-router.post(
-  "/users/import/excel",
-  authenticateToken,
-  checkPermission("user_management", "import"),
-  upload.single("file"),
-  async (req, res) => {
-    if (!req.file) {
-      return res.status(400).json({ message: "Excel file is required" });
-    }
-
-    const filePath = req.file.path;
-
-    try {
-      
-      const workbook = XLSX.readFile(filePath);
-      const sheetName = workbook.SheetNames[0];
-      const sheet = workbook.Sheets[sheetName];
-
-      const users = XLSX.utils.sheet_to_json(sheet);
-
-      for (const user of users) {
-        const { name, email, password, role, status = "active" } = user;
-
-        if (!name || !email || !password || !role) continue;
-
-        const [roleRow] = await pool.execute(
-          "SELECT id FROM roles WHERE name = ?",
-          [role]
-        );
-        if (roleRow.length === 0) continue;
-
-        const roleId = roleRow[0].id;
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-        await pool.execute(
-          "INSERT INTO login (name, email, password, role_id, role, insert_time, status) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)",
-          [name, email, hashedPassword, roleId, role, status]
-        );
-      }
-
-      fs.unlinkSync(filePath);
-      res.status(200).json({ message: "Users imported from Excel successfully" });
-    } catch (err) {
-      console.error("Excel import error:", err);
-      res.status(500).json({ message: "Excel import failed" });
-    }
-  }
-);
-
-
-//excel export 
-
-
+//excel export
 
 router.get("/users/export/excel", authenticateToken, async (req, res) => {
   try {
@@ -631,10 +595,7 @@ router.get("/users/export/excel", authenticateToken, async (req, res) => {
   }
 });
 
-
-
-
-//modules 
+//modules
 
 router.get("/modules", async (req, res) => {
   try {
@@ -709,7 +670,7 @@ router.delete("/modules/:id", async (req, res) => {
 router.get(
   "/roles",
   authenticateToken,
-  checkPermission("role_management", "view"),
+  checkPermission("role_management","enable", "view"),
   async (req, res) => {
     try {
       const [roles] = await pool.execute("SELECT * FROM roles");
@@ -735,7 +696,7 @@ router.get(
 router.get(
   "/roles/:id",
   authenticateToken,
-  checkPermission("role_management", "view"),
+  checkPermission("role_management","enable", "view"),
   async (req, res) => {
     const { id } = req.params;
     try {
@@ -765,7 +726,7 @@ router.get(
 router.post(
   "/roles",
   authenticateToken,
-  checkPermission("role_management", "create"),
+  checkPermission("role_management","enable", "create"),
   async (req, res) => {
     const { name, permissions } = req.body;
 
@@ -796,7 +757,7 @@ router.post(
 router.put(
   "/roles/:id",
   authenticateToken,
-  checkPermission("role_management", "edit"),
+  checkPermission("role_management", "enable","edit"),
   async (req, res) => {
     const { id } = req.params;
     const { name, permissions } = req.body;
@@ -836,7 +797,7 @@ router.put(
 router.delete(
   "/roles/:id",
   authenticateToken,
-  checkPermission("role_management", "delete"),
+  checkPermission("role_management","enable", "delete"),
   async (req, res) => {
     const { id } = req.params;
     try {
@@ -853,5 +814,191 @@ router.delete(
     }
   }
 );
+
+// Menu route
+router.get("/menu",async (req, res) => {
+  const userRole = req.query.role;
+
+  const query = `
+    SELECT id, path, icon, title, roles, parent_id, status, time,order_by
+    FROM menu_items
+    WHERE FIND_IN_SET(?, roles) > 0 AND status = 'active'
+    ORDER BY order_by ASC
+  `;
+
+  try {
+    const [results] = await pool.execute(query, [userRole]);
+    const organizedMenu = organizeMenu(results);
+
+    res.json(organizedMenu);
+  } catch (err) {
+    console.error("Error fetching menu items:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+
+//categories
+
+router.get('/categories', authenticateToken,
+  checkPermission("category","enable", "view"),
+  async (req, res) => {
+  try {
+    const [rows] = await pool.execute('SELECT * FROM category');
+    res.json(rows);
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    res.status(500).send('Server Error');
+  }
+});
+
+
+router.post('/categories', authenticateToken,
+  checkPermission("category","enable", "create"), 
+  async (req, res) => {
+  const { category_name, description } = req.body;
+
+  if (!category_name || !description) {
+    return res.status(400).json({ error: 'Category_Name and description are required' });
+  }
+
+  try {
+    const [result] = await pool.execute(
+      'INSERT INTO category (category_name, description) VALUES (?, ?)',
+      [category_name, description]
+    );
+
+   
+    const newCategory = {
+      id: result.insertId,
+      category_name,
+      description,
+    };
+
+    res.status(201).json(newCategory);
+  } catch (error) {
+    console.error('Error creating category:', error);
+    res.status(500).json({ error: 'Error creating category' });
+  }
+});
+
+router.put('/categories/:id', 
+  authenticateToken,
+  checkPermission("category", "enable", "edit"), 
+  async (req, res) => {
+    const { id } = req.params;
+    const { category_name, description } = req.body;
+
+    if (!category_name || !description) {
+      return res.status(400).json({ error: 'Category_Name and description are required' });
+    }
+
+    try {
+      const [result] = await pool.execute(
+        'UPDATE category SET category_name = ?, description = ? WHERE id = ?',
+        [category_name, description, id]
+      );
+
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: 'Category not found' });
+      }
+
+      res.status(200).json({ 
+        message: 'Category updated successfully',
+        category: { id, category_name, description }
+      });
+    } catch (error) {
+      console.error('Error updating category:', error);
+      res.status(500).json({ error: 'Error updating category' });
+    }
+});
+
+
+
+router.delete('/categories/:id',authenticateToken,
+  checkPermission("category","enable", "delete"),
+   async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const [result] = await pool.execute('DELETE FROM category WHERE id = ?', [id]);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Category not found' });
+    }
+
+    res.json({ message: 'Category deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting category:', error);
+    res.status(500).json({ error: 'Server error while deleting category' });
+  }
+});
+
+router.get('/complaints', 
+  authenticateToken,
+  checkPermission("complaint_management","enable", "view"),
+  async (req, res) => {
+  try {
+    const [rows] = await pool.execute('SELECT * FROM complaints ORDER BY createdAt DESC');
+
+    res.status(200).json(rows);
+  } catch (err) {
+    console.error('Error fetching complaints:', err);
+    res.status(500).json({ message: 'Error retrieving complaints' });
+  }
+});
+
+
+router.get('/complaints/:id',
+   authenticateToken,
+  checkPermission("complaint_management","enable", "view"),
+  async (req, res) => {
+  const complaintId = req.params.id;
+
+  try {
+    const [rows] = await pool.execute('SELECT * FROM complaints WHERE id = ?', [complaintId]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'Complaint not found' });
+    }
+
+    res.status(200).json(rows[0]);
+  } catch (err) {
+    console.error('Error fetching complaint:', err);
+    res.status(500).json({ message: 'Error retrieving complaint' });
+  }
+});
+
+
+router.post('/complaints', upload.single('image'),
+ authenticateToken,
+checkPermission("complaint_management","enable", "create"),
+async (req, res) => {
+  const { title, categories, description,mobileNumber } = req.body;
+  const image = req.file ? req.file.filename : null;
+
+    try {
+    const [result] = await pool.execute(
+      'INSERT INTO complaints (title, categories, description, image,mobileNumber) VALUES (?, ?, ?, ?,?)',
+      [title, categories, description, image,mobileNumber]
+    );
+
+    res.status(200).json({
+      id: result.insertId,
+      title,
+      category: categories,
+      description,
+      image,
+      createdAt: new Date(),
+      mobileNumber,
+    });
+  } catch (err) {
+    console.error('Error inserting complaint:', err);
+    res.status(500).json({ message: 'Error saving complaint' });
+  }
+});
+
+
+
 
 export default router;

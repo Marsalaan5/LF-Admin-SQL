@@ -2,8 +2,8 @@ import jwt from "jsonwebtoken";
 import { pool } from "../server.js";
 
 export function isAdmin(req, res, next) {
-  if (req.user.role !== "super admin") {
-    return res.status(403).json({ message: "Access denied. Admins only." });
+  if (req.user.role !== "Super Admin") {
+    return res.status(403).json({ message: "Access denied. Super Admins only." });
   }
   next();
 }

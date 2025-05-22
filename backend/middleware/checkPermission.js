@@ -1,5 +1,5 @@
 // Permission middleware that checks if a user has a specific permission for a module
-export function checkPermission(moduleName, action) {
+export function checkPermission(moduleName, action="enable") {
   return (req, res, next) => {
     const user = req.user;
 

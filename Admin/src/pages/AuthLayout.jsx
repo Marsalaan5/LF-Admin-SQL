@@ -155,6 +155,9 @@ function AuthLayout({ children }) {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   const toggleSidebar = () => setIsSidebarOpen(prev => !prev);
+  const storedUser = JSON.parse(localStorage.getItem("user")); // assuming 'user' is the key
+const userRole = storedUser?.role;
+
 
   // Detect screen size
   useEffect(() => {
@@ -197,7 +200,7 @@ function AuthLayout({ children }) {
       <div style={{ display: "flex" }}>
         {/* Sidebar */}
         <div style={sidebarStyles}>
-          <Sidebar isOpen={isSidebarOpen} />
+          <Sidebar isOpen={isSidebarOpen} userRole={userRole}/>
         </div>
 
         {/* Main Content */}

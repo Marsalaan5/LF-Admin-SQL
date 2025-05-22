@@ -142,14 +142,14 @@ function RolesManagement() {
     Object.keys(modules).forEach((module) => {
       perms[module] = {};
       modules[module].forEach((action) => {
-        perms[module][action] = false; // All actions are initially false
+        perms[module][action] = false;
       });
     });
 
     return perms;
   };
 
-  // Format permissions for display in the table
+ 
   const formatPermissions = (permissions) => {
     return Object.entries(permissions)
       .map(([component, actions]) => {

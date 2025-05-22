@@ -5,7 +5,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import mysql from "mysql2/promise";
 import authRoutes from "./routes/auth.js";
-
+import path from "path";
 dotenv.config();
 
 const app = express();
@@ -21,6 +21,7 @@ app.use(express.json());
 const PORT = 5001;
 
 app.use("/auth", authRoutes);
+// app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 io.on("connection", (socket) => {
   console.log("New client connected:", socket.id);
