@@ -23,101 +23,157 @@ import Profile from "./pages/Profile.jsx";
 import UserProfile from "./pages/UserProfile.jsx";
 // import Categories from "./pages/Category.jsx";
 import Category from "./pages/Category.jsx";
-import Complaint from "./pages/ComplaintManagement.jsx";
 import ComplaintManagement from "./pages/ComplaintManagement.jsx";
+import Complaint from "./pages/Complaint.jsx";
+import { Toaster } from 'react-hot-toast';
+// import { ComplaintProvider } from "./context/ComplaintContext.jsx"; // Adjust path if needed
+
+// function App() {
+//   const { isLoggedIn } = useContext(AuthContext);
+
+//   return (
+//     <Router>
+//       <Routes>
+//         <Route path="/login" element={<Login />} />
+//         <Route path="/register" element={<Register />} />
+//         <Route path="/profile" element={<Profile />} />
+//           <Route path="/users/:id" element={<UserProfile />} />
+//           {/* <Route path="/category" element={<Categories />} /> */}
+//         {/* <Route path="/user/:id" element={<Profile />} /> */}
+
+//         {isLoggedIn ? (
+//           <>
+//             <Route
+//               path="/"
+//               element={
+//                 <AuthLayout>
+//                   <Dashboard />
+//                 </AuthLayout>
+//               }
+//             />
+//             <Route
+//               path="/user_management"
+//               element={
+//                 <AuthLayout>
+//                   <UserManagement />
+//                 </AuthLayout>
+//               }
+//             />
+//             <Route
+//               path="/role_management"
+//               element={
+//                 <AuthLayout>
+//                   {/* <UserManagement /> */}
+//                   <RoleManagement />
+//                 </AuthLayout>
+//               }
+//             />
+//             <Route
+//               path="/roles/:roleId/permissions"
+//               element={
+//                 <AuthLayout>
+//                   <RoleManagement />
+//                 </AuthLayout>
+//               }
+//             />
+//                 <Route
+//       path="/users/:id"
+//       element={
+//         <AuthLayout>
+//           <UserProfile />
+//         </AuthLayout>
+//       }
+//     />
+//                 <Route
+//       path="/category"
+//       element={
+//         <AuthLayout>
+//           <Category/>
+//         </AuthLayout>
+//       }
+//     />
+//                 <Route
+//       path="/complaints_management"
+//       element={
+//         <AuthLayout>
+//           <ComplaintManagement/>
+//         </AuthLayout>
+//       }
+//     />
+//                 <Route
+//       path="/complaintS"
+//       element={
+//         <AuthLayout>
+//           <Complaint/>
+//         </AuthLayout>
+//       }
+//     />
+//           </>
+//         ) : (
+//           <>
+//             <Route path="/" element={<Navigate to="/login" />} />
+//             <Route path="/user_management" element={<Navigate to="/login" />} />
+//             <Route path="/role_management" element={<Navigate to="/login" />} />
+//             <Route path="/category" element={<Navigate to="/login" />} />
+//             <Route path="/complaints" element={<Navigate to="/login" />} />
+//             <Route path="/complaints_management" element={<Navigate to="/login" />} />
+//             {/* <Route path="/roles/:roleId/permissions" element={<RoleManagement />} /> */}
+//             <Route
+//               path="/roles/:roleId/permissions"
+//               element={<Navigate to="/login" />}
+//             />
+              
+//     <Route path="/users/:id" element={<Navigate to="/login" />} />
+//           </>
+//         )}
+//       </Routes>
+//     </Router>
+//   );
+// }
+
+// export default App;
+
 
 function App() {
   const { isLoggedIn } = useContext(AuthContext);
 
   return (
     <Router>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/profile" element={<Profile />} />
+            <Toaster position="top-right" reverseOrder={false} />
+      {/* <ComplaintProvider> ✅ Add this wrapper here */}
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/profile" element={<Profile />} />
           <Route path="/users/:id" element={<UserProfile />} />
-          {/* <Route path="/category" element={<Categories />} /> */}
-        {/* <Route path="/user/:id" element={<Profile />} /> */}
 
-        {isLoggedIn ? (
-          <>
-            <Route
-              path="/"
-              element={
-                <AuthLayout>
-                  <Dashboard />
-                </AuthLayout>
-              }
-            />
-            <Route
-              path="/user_management"
-              element={
-                <AuthLayout>
-                  <UserManagement />
-                </AuthLayout>
-              }
-            />
-            <Route
-              path="/role_management"
-              element={
-                <AuthLayout>
-                  {/* <UserManagement /> */}
-                  <RoleManagement />
-                </AuthLayout>
-              }
-            />
-            <Route
-              path="/roles/:roleId/permissions"
-              element={
-                <AuthLayout>
-                  <RoleManagement />
-                </AuthLayout>
-              }
-            />
-                <Route
-      path="/users/:id"
-      element={
-        <AuthLayout>
-          <UserProfile />
-        </AuthLayout>
-      }
-    />
-                <Route
-      path="/category"
-      element={
-        <AuthLayout>
-          <Category/>
-        </AuthLayout>
-      }
-    />
-                <Route
-      path="/complaint"
-      element={
-        <AuthLayout>
-          <ComplaintManagement/>
-        </AuthLayout>
-      }
-    />
-          </>
-        ) : (
-          <>
-            <Route path="/" element={<Navigate to="/login" />} />
-            <Route path="/user_management" element={<Navigate to="/login" />} />
-            <Route path="/role_management" element={<Navigate to="/login" />} />
-            <Route path="/category" element={<Navigate to="/login" />} />
-            <Route path="/complaint" element={<Navigate to="/login" />} />
-            {/* <Route path="/roles/:roleId/permissions" element={<RoleManagement />} /> */}
-            <Route
-              path="/roles/:roleId/permissions"
-              element={<Navigate to="/login" />}
-            />
-              
-    <Route path="/users/:id" element={<Navigate to="/login" />} />
-          </>
-        )}
-      </Routes>
+          {isLoggedIn ? (
+            <>
+              <Route path="/" element={<AuthLayout><Dashboard /></AuthLayout>} />
+              <Route path="/user_management" element={<AuthLayout><UserManagement /></AuthLayout>} />
+              <Route path="/role_management" element={<AuthLayout><RoleManagement /></AuthLayout>} />
+              <Route path="/roles/:roleId/permissions" element={<AuthLayout><RoleManagement /></AuthLayout>} />
+              <Route path="/category" element={<AuthLayout><Category /></AuthLayout>} />
+              <Route path="/complaints_management" element={<AuthLayout><ComplaintManagement /></AuthLayout>} />
+              <Route path="/complaints" element={<AuthLayout><Complaint /></AuthLayout>} />
+            </>
+          ) : (
+            <>
+              <Route path="/" element={<Navigate to="/login" />} />
+              <Route path="/user_management" element={<Navigate to="/login" />} />
+              <Route path="/role_management" element={<Navigate to="/login" />} />
+              <Route path="/roles/:roleId/permissions" element={<Navigate to="/login" />} />
+              <Route path="/category" element={<Navigate to="/login" />} />
+              <Route path="/complaints_management" element={<Navigate to="/login" />} />
+              <Route path="/complaints" element={<Navigate to="/login" />} />
+              <Route path="/users/:id" element={<Navigate to="/login" />} />
+            </>
+          )}
+        </Routes>
+      {/* </ComplaintProvider> */}
     </Router>
   );
 }
+
 
 export default App;

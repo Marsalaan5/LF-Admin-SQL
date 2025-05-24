@@ -934,70 +934,174 @@ router.delete('/categories/:id',authenticateToken,
   }
 });
 
+
+
+//complaints
+
+// router.get('/complaints', 
+//   authenticateToken,
+//   checkPermission("complaint_management","enable", "view"),
+//   async (req, res) => {
+//     try {
+//       const userId = req.user.id;
+//  const complaintId = req.params.id;
+//       const [rows] = await pool.execute(
+    
+//   `SELECT * FROM complaints WHERE id = ? AND user_id = ?`,
+//   [complaintId, userId]
+// );
+
+//       res.status(200).json(rows);
+//     } catch (err) {
+//       console.error('Error fetching complaints:', err);
+//       res.status(500).json({ message: 'Error retrieving complaints' });
+//     }
+// });
+
+
+// router.get('/complaints', 
+//   authenticateToken,
+//   checkPermission("complaint_management","enable", "view"),
+//   async (req, res) => {
+//     try {
+//       const userId = req.user.id;
+//       // Fetch all complaints for this user
+//       const [rows] = await pool.execute(
+//   `SELECT * FROM complaints WHERE user_id = ? ORDER BY created_at DESC`,
+//   [userId]
+// );
+
+
+//       res.status(200).json(rows);
+//     } catch (err) {
+//       console.error('Error fetching complaints:', err);
+//       res.status(500).json({ message: 'Error retrieving complaints' });
+//     }
+// });
+
+
 router.get('/complaints', 
   authenticateToken,
-  checkPermission("complaint_management","enable", "view"),
+  checkPermission("complaint_management", "enable", "view"),
   async (req, res) => {
-  try {
-    const [rows] = await pool.execute('SELECT * FROM complaints ORDER BY createdAt DESC');
+    try {
+      const userId = req.user.id;
+      const role = req.user.role; // Assuming role is set in the token
 
-    res.status(200).json(rows);
-  } catch (err) {
-    console.error('Error fetching complaints:', err);
-    res.status(500).json({ message: 'Error retrieving complaints' });
-  }
+      let query = `SELECT * FROM complaints`;
+      let params = [];
+
+      if (role !== 'Super Admin' && role !== 'Admin') {
+        query += ` WHERE user_id = ?`;
+        params.push(userId);
+      }
+
+      query += ` ORDER BY created_at DESC`;
+
+      const [rows] = await pool.execute(query, params);
+
+      res.status(200).json(rows);
+    } catch (err) {
+      console.error('Error fetching complaints:', err);
+      res.status(500).json({ message: 'Error retrieving complaints' });
+    }
 });
 
+
+
+
+
+// router.get('/complaints/:id',
+//   authenticateToken,
+//   checkPermission("complaint_management","enable", "view"),
+//   async (req, res) => {
+//     const complaintId = req.params.id;
+//     const userId = req.user.id;
+
+//     try {
+//     const [rows] = await pool.execute(
+//   `SELECT * FROM complaints WHERE id = ? AND user_id = ?`,
+//   [complaintId, userId]
+// );
+
+
+//       if (rows.length === 0) {
+//         return res.status(404).json({ message: 'Complaint not found' });
+//       }
+
+//       res.status(200).json(rows[0]);
+//     } catch (err) {
+//       console.error('Error fetching complaint:', err);
+//       res.status(500).json({ message: 'Error retrieving complaint' });
+//     }
+// });
 
 router.get('/complaints/:id',
-   authenticateToken,
-  checkPermission("complaint_management","enable", "view"),
+  authenticateToken,
+  checkPermission("complaint_management", "enable", "view"),
   async (req, res) => {
-  const complaintId = req.params.id;
-
-  try {
-    const [rows] = await pool.execute('SELECT * FROM complaints WHERE id = ?', [complaintId]);
-
-    if (rows.length === 0) {
-      return res.status(404).json({ message: 'Complaint not found' });
-    }
-
-    res.status(200).json(rows[0]);
-  } catch (err) {
-    console.error('Error fetching complaint:', err);
-    res.status(500).json({ message: 'Error retrieving complaint' });
-  }
-});
-
-
-router.post('/complaints', upload.single('image'),
- authenticateToken,
-checkPermission("complaint_management","enable", "create"),
-async (req, res) => {
-  const { title, categories, description,mobileNumber } = req.body;
-  const image = req.file ? req.file.filename : null;
+    const complaintId = req.params.id;
+    const userId = req.user.id;
+    const role = req.user.role;
 
     try {
-    const [result] = await pool.execute(
-      'INSERT INTO complaints (title, categories, description, image,mobileNumber) VALUES (?, ?, ?, ?,?)',
-      [title, categories, description, image,mobileNumber]
-    );
+      let query = `SELECT * FROM complaints WHERE id = ?`;
+      let params = [complaintId];
 
-    res.status(200).json({
-      id: result.insertId,
-      title,
-      category: categories,
-      description,
-      image,
-      createdAt: new Date(),
-      mobileNumber,
-    });
-  } catch (err) {
-    console.error('Error inserting complaint:', err);
-    res.status(500).json({ message: 'Error saving complaint' });
-  }
+      if (role !== 'Super Admin' && role !== 'Admin') {
+        query += ` AND user_id = ?`;
+        params.push(userId);
+      }
+
+      const [rows] = await pool.execute(query, params);
+
+      if (rows.length === 0) {
+        return res.status(404).json({ message: 'Complaint not found' });
+      }
+
+      res.status(200).json(rows[0]);
+    } catch (err) {
+      console.error('Error fetching complaint:', err);
+      res.status(500).json({ message: 'Error retrieving complaint' });
+    }
 });
 
+
+
+router.post('/complaints',
+  upload.single('image'),
+  authenticateToken,
+  checkPermission("complaint_management", "enable", "create"),
+  async (req, res) => {
+    const { title, categories, description, mobileNumber } = req.body;
+    const image = req.file ? req.file.filename : null;
+    const userId = req.user.id;
+
+    try {
+      const [insertResult] = await pool.execute(
+        `INSERT INTO complaints 
+          (user_id, title, categories, description, image, mobileNumber)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [userId, title, categories, description, image, mobileNumber || null]
+      );
+
+      res.status(200).json({
+        id: insertResult.insertId,
+        user_id: userId,
+        title,
+        categories,
+        description,
+        image,
+        mobileNumber,
+        createdAt: new Date()
+      });
+
+    } catch (err) {
+      console.error('Error inserting complaint:', err);
+      res.status(500).json({ message: 'Error saving complaint' });
+    }
+  }
+);
 
 
 
