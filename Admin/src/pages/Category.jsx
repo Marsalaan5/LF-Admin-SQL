@@ -1,509 +1,11 @@
-// import React, { useState, useEffect, useContext } from 'react';
-// import { useNavigate } from 'react-router-dom';
-// import axios from 'axios';
-// import { Button, Modal, Form } from 'react-bootstrap';
-// import { AuthContext } from '../context/AuthContext';
-
-// function Category() {
-
-//   const {token} = useContext(AuthContext)
-//   const [categories, setCategories] = useState([]);
-//   const [editingCategory, setEditingCategory] = useState(null);
-
-//   const [showModal, setShowModal] = useState(false);
-//   const [categoryName, setCategoryName] = useState('');
-//   const [categoryDescription, setCategoryDescription] = useState('');
-//   const [error, setError] = useState(null);
-  
-
-//   const navigate = useNavigate()
-//   // Fetch categories
-//   const fetchCategories = async () => {
-//     try {
-//       const response = await axios.get('http://localhost:5001/auth/categories',{
-//          headers: {
-//     Authorization: `Bearer ${token}`
-//          }
-//       });
-//       setCategories(response.data);
-//     } catch (err) {
-//       setError('Failed to load categories');
-//     }
-//   };
-
-//   // useEffect(() => {
-//   // }, []);
-  
-//   useEffect(() => {
-//     if (!token) {
-//       console.log("token:", token);
-//       navigate("/login");
-//       return;
-//     }
-//     // fetchUsers();
-//     fetchCategories();
-//     // fetchRoles();
-//   }, [token]);
-
-
-// // const handleAddCategory = async () => {
-// //   if (!categoryName || !categoryDescription) {
-// //     setError('Both fields are required');
-// //     return;
-// //   }
-
-// //   try {
-// //     await axios.post(
-// //       'http://localhost:5001/auth/categories',
-// //       {
-// //         category_name: categoryName,
-// //         description: categoryDescription
-// //       },
-// //       {
-// //         headers: {
-// //           Authorization: `Bearer ${token}`
-// //         }
-// //       }
-// //     );
-// //     setCategoryName('');
-// //     setCategoryDescription('');
-// //     setShowModal(false);
-// //     fetchCategories();
-// //   } catch (err) {
-// //     console.error(err);
-// //     setError('Failed to add category');
-// //   }
-// // };
-
-
-// const handleSubmitCategory = async () => {
-//   if (!categoryName || !categoryDescription) {
-//     setError('Both fields are required');
-//     return;
-//   }
-
-//   try {
-//     if (editingCategory) {
-//       // Edit
-//       await axios.put(
-//         `http://localhost:5001/auth/categories/${editingCategory.id}`,
-//         {
-//           category_name: categoryName,
-//           description: categoryDescription
-//         },
-//         {
-//           headers: {
-//             Authorization: `Bearer ${token}`
-//           }
-//         }
-//       );
-//     } else {
-//       // Add
-//       await axios.post(
-//         'http://localhost:5001/auth/categories',
-//         {
-//           category_name: categoryName,
-//           description: categoryDescription
-//         },
-//         {
-//           headers: {
-//             Authorization: `Bearer ${token}`
-//           }
-//         }
-//       );
-//     }
-
-//     // Reset form and reload
-//     setCategoryName('');
-//     setCategoryDescription('');
-//     setEditingCategory(null);
-//     setShowModal(false);
-//     fetchCategories();
-//   } catch (err) {
-//     console.error(err);
-//     setError(editingCategory ? 'Failed to update category' : 'Failed to add category');
-//   }
-// };
-
-
-// const handleEditCategory = (category) => {
-//   setEditingCategory(category);
-//   setCategoryName(category.category_name);
-//   setCategoryDescription(category.description);
-//   setShowModal(true);
-// };
-
-
-
-
-
-//   const handleDeleteCategory = async (id) => {
-//   const confirmDelete = window.confirm('Are you sure you want to delete this category?');
-//   if (confirmDelete) {
-//     try {
-//       await axios.delete(`http://localhost:5001/auth/categories/${id}`, {
-//         headers: {
-//           Authorization: `Bearer ${token}`
-//         }
-//       });
-//       fetchCategories();
-//     } catch (err) {
-//       console.error(err);
-//       setError('Failed to delete category');
-//     }
-//   }
-// };
-
-
-//   return (
-//     // <div className="container d-flex justifmt-5 p-4">
-//     <div className="container-fluid mt-5 p-2 border shadow-sm">
-
-
-//  <div className="p-4 d-flex justify-content-between align-items-center">
-
-
-//   <div className="col-sm-6">
-//           <h1 className="m-0 text-dark">Category</h1>
-//           <div className="col-sm-6">
-//             <ol className="breadcrumb float-sm-right">
-//               <li className="breadcrumb-item">
-//                 <a href="/">Home</a>
-//               </li>
-//               <li className="breadcrumb-item active">Category Management</li>
-//             </ol>
-//           </div>
-//         </div>
-
-
-//       {/* <h2>Categories</h2> */}
-// <div className="d-flex gap-3">
-//         <button
-//           className="btn btn-success d-flex align-items-center"
-//           data-bs-toggle="modal"
-//           data-bs-target="#addUserModal"
-//           onClick={() => setShowModal(true)}
-//           >
-//           <i className="fas fa-plus me-2"></i> Add Category
-//         </button>
-//       {error && <div className="alert alert-danger mt-3">{error}</div>}
-//         {/* )} */}
-//           </div>
-
-//       {/* <Button variant="primary" onClick={() => setShowModal(true)}>Add Category</Button> */}
-// </div>
-//       <div className="p-4 ">
-//       <table className="table mt-3">
-//         <thead>
-//           <tr>
-//             <th>Category Name</th>
-//             <th>Description</th>
-//             <th>Actions</th>
-//           </tr>
-//         </thead>
-//         <tbody>
-//           {categories.map((category) => (
-//             <tr key={category.id}>
-//               <td>{category.category_name}</td>
-//               <td>{category.description}</td>
-//               <td>
-//                <button
-//                       className="btn btn-outline-primary btn-sm"
-//                       onClick={() => handleEditUser(category)}
-//                       title="Edit"
-//                     >
-//                       <i className="fas fa-edit"></i>
-//                     </button>
-//                 <button
-//                       className="btn btn-outline-danger btn-sm ms-2"
-//                       onClick={() => handleDeleteCategory(category.id)}
-//                       title="Delete"
-//                     >
-//                       <i className="fas fa-trash-alt"></i>
-//                     </button>
-//               </td>
-//             </tr>
-//           ))}
-//         </tbody>
-//       </table>
-
-//       {/* Add Category Modal */}
-//       <Modal show={showModal} onHide={() => setShowModal(false)}>
-//         <Modal.Header closeButton>
-//           <Modal.Title>Add Category</Modal.Title>
-//         </Modal.Header>
-//         <Modal.Body>
-//           <Form>
-//             <Form.Group controlId="categoryName">
-//               <Form.Label>Category Name</Form.Label>
-//               <Form.Control
-//                 type="text"
-//                 placeholder="Enter category name"
-//                 value={categoryName}
-//                 onChange={(e) => setCategoryName(e.target.value)}
-//               />
-//             </Form.Group>
-//             <Form.Group controlId="categoryDescription" className="mt-3">
-//               <Form.Label>Category Description</Form.Label>
-//               <Form.Control
-//                 as="textarea"
-//                 rows={3}
-//                 placeholder="Enter category description"
-//                 value={categoryDescription}
-//                 onChange={(e) => setCategoryDescription(e.target.value)}
-//               />
-//             </Form.Group>
-//           </Form>
-//         </Modal.Body>
-//         <Modal.Footer>
-//           <Button variant="secondary" onClick={() => setShowModal(false)}>
-//             Close
-//           </Button>
-//           <Button variant="primary" onClick={handleAddCategory}>
-//             Add Category
-//           </Button>
-//         </Modal.Footer>
-//       </Modal>
-//     </div>
-//     </div>
-    
-//   );
-// }
-
-// export default Category;
-
-
-
-// import React, { useState, useEffect, useContext } from 'react';
-// import { useNavigate } from 'react-router-dom';
-// import axios from 'axios';
-// import { Button, Modal, Form } from 'react-bootstrap';
-// import { AuthContext } from '../context/AuthContext';
-
-// function Categories() {
-//   const { token } = useContext(AuthContext);
-//   const [categories, setCategories] = useState([]);
-//   const [editingCategory, setEditingCategory] = useState(null);
-//   const [showModal, setShowModal] = useState(false);
-//   const [categoryName, setCategoryName] = useState('');
-//   const [categoryDescription, setCategoryDescription] = useState('');
-//   const [error, setError] = useState(null);
-
-//   const navigate = useNavigate();
-
-//   // Fetch categories
-//   const fetchCategories = async () => {
-//     try {
-//       const response = await axios.get('http://localhost:5001/auth/categories', {
-//         headers: {
-//           Authorization: `Bearer ${token}`,
-//         },
-//       });
-//       setCategories(response.data);
-//     } catch (err) {
-//       setError('Failed to load categories');
-//     }
-//   };
-
-//   useEffect(() => {
-//     if (!token) {
-//       console.log('token:', token);
-//       navigate('/login');
-//       return;
-//     }
-//     fetchCategories();
-//   }, [token]);
-
-//   const handleSubmitCategory = async () => {
-//     if (!categoryName || !categoryDescription) {
-//       setError('Both fields are required');
-//       return;
-//     }
-
-//     try {
-//       if (editingCategory) {
-//         // Edit category
-//         await axios.put(
-//           `http://localhost:5001/auth/categories/${editingCategory.id}`,
-//           {
-//             category_name: categoryName,
-//             description: categoryDescription,
-//           },
-//           {
-//             headers: {
-//               Authorization: `Bearer ${token}`,
-//             },
-//           }
-//         );
-//       } else {
-//         // Add new category
-//         await axios.post(
-//           'http://localhost:5001/auth/categories',
-//           {
-//             category_name: categoryName,
-//             description: categoryDescription,
-//           },
-//           {
-//             headers: {
-//               Authorization: `Bearer ${token}`,
-//             },
-//           }
-//         );
-//       }
-
-//       // Reset form and reload
-//       setCategoryName('');
-//       setCategoryDescription('');
-//       setEditingCategory(null);
-//       setShowModal(false);
-//       fetchCategories();
-//     } catch (err) {
-//       console.error(err);
-//       setError(editingCategory ? 'Failed to update category' : 'Failed to add category');
-//     }
-//   };
-
-//   const handleEditCategory = (category) => {
-//     setEditingCategory(category);
-//     setCategoryName(category.category_name);
-//     setCategoryDescription(category.description);
-//     setShowModal(true);
-//   };
-
-//   const handleDeleteCategory = async (id) => {
-//     const confirmDelete = window.confirm('Are you sure you want to delete this category?');
-//     if (confirmDelete) {
-//       try {
-//         await axios.delete(`http://localhost:5001/auth/categories/${id}`, {
-//           headers: {
-//             Authorization: `Bearer ${token}`,
-//           },
-//         });
-//         fetchCategories();
-//       } catch (err) {
-//         console.error(err);
-//         setError('Failed to delete category');
-//       }
-//     }
-//   };
-
-//   const handleCloseModal = () => {
-//     setShowModal(false);
-//     setCategoryName('');
-//     setCategoryDescription('');
-//     setEditingCategory(null); // Reset editing state
-//   };
-
-//   return (
-//     <div className="container-fluid mt-5 p-2 border shadow-sm">
-//       <div className="p-4 d-flex justify-content-between align-items-center">
-//         <div className="col-sm-6">
-//           <h1 className="m-0 text-dark">Category</h1>
-//           <div className="col-sm-6">
-//             <ol className="breadcrumb float-sm-right">
-//               <li className="breadcrumb-item">
-//                 <a href="/">Home</a>
-//               </li>
-//               <li className="breadcrumb-item active">Category Management</li>
-//             </ol>
-//           </div>
-//         </div>
-//         <div className="d-flex gap-3">
-//           <button
-//             className="btn btn-success d-flex align-items-center"
-//             onClick={() => setShowModal(true)}
-//           >
-//             <i className="fas fa-plus me-2"></i> Add Category
-//           </button>
-//           {error && <div className="alert alert-danger mt-3">{error}</div>}
-//         </div>
-//       </div>
-
-//       <div className="p-4">
-//         <table className="table mt-3">
-//           <thead>
-//             <tr>
-//               <th>Category Name</th>
-//               <th>Description</th>
-//               <th>Actions</th>
-//             </tr>
-//           </thead>
-//           <tbody>
-//             {categories.map((category) => (
-//               <tr key={category.id}>
-//                 <td>{category.category_name}</td>
-//                 <td>{category.description}</td>
-//                 <td>
-//                   <button
-//                     className="btn btn-outline-primary btn-sm"
-//                     onClick={() => handleEditCategory(category)}
-//                     title="Edit"
-//                   >
-//                     <i className="fas fa-edit"></i>
-//                   </button>
-//                   <button
-//                     className="btn btn-outline-danger btn-sm ms-2"
-//                     onClick={() => handleDeleteCategory(category.id)}
-//                     title="Delete"
-//                   >
-//                     <i className="fas fa-trash-alt"></i>
-//                   </button>
-//                 </td>
-//               </tr>
-//             ))}
-//           </tbody>
-//         </table>
-
-//         {/* Category Modal */}
-//         <Modal show={showModal} onHide={handleCloseModal}>
-//           <Modal.Header closeButton>
-//             <Modal.Title>{editingCategory ? 'Edit Category' : 'Add Category'}</Modal.Title>
-//           </Modal.Header>
-//           <Modal.Body>
-//             <Form>
-//               <Form.Group controlId="categoryName">
-//                 <Form.Label>Category Name</Form.Label>
-//                 <Form.Control
-//                   type="text"
-//                   placeholder="Enter category name"
-//                   value={categoryName}
-//                   onChange={(e) => setCategoryName(e.target.value)}
-//                 />
-//               </Form.Group>
-//               <Form.Group controlId="categoryDescription" className="mt-3">
-//                 <Form.Label>Category Description</Form.Label>
-//                 <Form.Control
-//                   as="textarea"
-//                   rows={3}
-//                   placeholder="Enter category description"
-//                   value={categoryDescription}
-//                   onChange={(e) => setCategoryDescription(e.target.value)}
-//                 />
-//               </Form.Group>
-//             </Form>
-//           </Modal.Body>
-//           <Modal.Footer>
-//             <Button variant="secondary" onClick={handleCloseModal}>
-//               Close
-//             </Button>
-//             <Button variant="primary" onClick={handleSubmitCategory}>
-//               {editingCategory ? 'Update Category' : 'Add Category'}
-//             </Button>
-//           </Modal.Footer>
-//         </Modal>
-//       </div>
-//     </div>
-//   );
-// }
-
-// export default Categories;
-
-
 
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
+import toast, { Toaster } from "react-hot-toast"; 
+
+
 
 function Category() {
   const { token } = useContext(AuthContext);
@@ -540,55 +42,58 @@ function Category() {
   }, [token]);
 
   const handleSubmitCategory = async () => {
-    if (!categoryName || !categoryDescription) {
-      setError('Both fields are required');
-      return;
-    }
+  if (!categoryName || !categoryDescription) {
+    setError('Both fields are required');
+    return;
+  }
 
-    try {
-      if (editingCategory) {
-        // Edit category
-        await axios.put(
-          `http://localhost:5001/auth/categories/${editingCategory.id}`,
-          {
-            category_name: categoryName,
-            description: categoryDescription,
+  try {
+    if (editingCategory) {
+      // Edit category
+      await axios.put(
+        `http://localhost:5001/auth/categories/${editingCategory.id}`,
+        {
+          category_name: categoryName,
+          description: categoryDescription,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
           },
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-      } else {
-        // Add new category
-        await axios.post(
-          'http://localhost:5001/auth/categories',
-          {
-            category_name: categoryName,
-            description: categoryDescription,
+        }
+      );
+      toast.success("Your Category has been edited successfully.");
+    } else {
+ 
+      await axios.post(
+        'http://localhost:5001/auth/categories',
+        {
+          category_name: categoryName,
+          description: categoryDescription,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
           },
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-      }
-
-      // Reset form and reload
-      setCategoryName('');
-      setCategoryDescription('');
-      setEditingCategory(null);
-      setShowModal(false);
-      fetchCategories();
-    } catch (err) {
-      console.error(err);
-      setError(editingCategory ? 'Failed to update category' : 'Failed to add category');
+        }
+      );
+      toast.success("Your Category has been submitted successfully.");
     }
-  };
+    setCategoryName('');
+    setCategoryDescription('');
+    setEditingCategory(null);
+    setShowModal(false);
+    fetchCategories();
+    setError(null);
+  } catch (err) {
+    console.error(err);
+    setError(editingCategory ? 'Failed to update category' : 'Failed to add category');
+  }
+};
+
 
   const handleEditCategory = (category) => {
+   
     setEditingCategory(category);
     setCategoryName(category.category_name);
     setCategoryDescription(category.description);
@@ -604,6 +109,7 @@ function Category() {
             Authorization: `Bearer ${token}`,
           },
         });
+        toast.success("Your Category has been deleted successfully.")
         fetchCategories();
       } catch (err) {
         console.error(err);

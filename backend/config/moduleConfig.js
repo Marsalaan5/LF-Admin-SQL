@@ -7,5 +7,6 @@ export default {
   role_management: ["enable", "create","view", "edit", "delete"],
   category: ["enable", "create","view", "edit", "delete"],
   complaint_management: ["enable", "create","view", "edit", "delete"],
+  menu_management: ["enable", "create","view", "edit", "delete"],
   reports: ["view", "export", "download_pdf"],
 };

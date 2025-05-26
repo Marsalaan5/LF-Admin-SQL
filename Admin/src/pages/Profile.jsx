@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import toast, { Toaster } from "react-hot-toast";  // Import react-hot-toast
+import toast, { Toaster } from "react-hot-toast"; 
 
 function Profile() {
   const [user, setUser] = useState(null);
@@ -54,7 +54,10 @@ function Profile() {
       formData.email === user.email &&
       formData.password === ""
     ) {
-      toast("No changes detected.", { icon: "⚠️", style: { backgroundColor: "orange", color: "white" } });  // Info toast
+      toast("No changes detected.", {
+        icon: "⚠️",
+        style: { backgroundColor: "orange", color: "white" },
+      }); // Info toast
       return; // Exit the function if no changes were made
     }
 
@@ -89,17 +92,19 @@ function Profile() {
       // If the password was updated, log the user out by clearing the token
       if (formData.password.trim()) {
         localStorage.removeItem("token"); // Clear the token from localStorage
-        toast.success("Password updated successfully. You have been logged out.");  // Success toast
+        toast.success(
+          "Password updated successfully. You have been logged out."
+        ); // Success toast
         navigate("/login"); // Redirect to the login page
         return; // Exit the function
       }
 
       setIsEditing(false);
-      toast.success("Profile updated successfully!");  // Success toast
+      toast.success("Profile updated successfully!"); // Success toast
       navigate("/profile");
     } catch (error) {
       console.error("Error updating profile:", error);
-      toast.error("Failed to update profile.");  // Error toast
+      toast.error("Failed to update profile."); // Error toast
     }
   };
 
@@ -184,9 +189,9 @@ function Profile() {
           </form>
         </div>
       </div>
-
       {/* Toast Container */}
-      <Toaster position="top-center" />  {/* Toast container to show notifications */}
+      <Toaster position="top-center" />{" "}
+      {/* Toast container to show notifications */}
     </div>
   );
 }

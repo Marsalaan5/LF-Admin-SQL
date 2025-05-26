@@ -1,45 +1,34 @@
 import multer from "multer";
 import express from "express";
-
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { pool, io } from "../server.js";
 import { authenticateToken, isAdmin } from "../middleware/authMiddleware.js";
 import moduleConfig from "../config/moduleConfig.js";
-
 import { checkPermission } from "../middleware/checkPermission.js";
-
 import fs from "fs";
 import path from "path";
 import csv from "csv-parser";
 import { Parser } from "json2csv";
 import XLSX from "xlsx";
-
-import { fileURLToPath } from 'url';
-// import path from 'path';
-
-
+import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-
 const router = express.Router();
 
-
-const uploadDir = path.join(__dirname, 'uploads');
+const uploadDir = path.join(__dirname, "uploads");
 
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir);
-  console.log('Created uploads directory.');
+  console.log("Created uploads directory.");
 }
 
 //image uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    // cb(null, "uploads/");
     cb(null, uploadDir);
-
   },
   filename: (req, file, cb) => {
     cb(null, Date.now() + "-" + file.originalname);
@@ -62,17 +51,14 @@ const upload = multer({
   },
 });
 
-// Function to organize the menu into a hierarchical structure
 function organizeMenu(menuItems) {
   const organizedMenu = [];
   const map = {};
-  
-  // Create a map of all menu items for easy reference by ID
+
   menuItems.forEach((item) => {
     map[item.id] = { ...item, children: [] };
   });
-  
-  // Now organize the menu into a tree structure
+
   menuItems.forEach((item) => {
     if (item.parent_id === null) {
       organizedMenu.push(map[item.id]);
@@ -82,7 +68,7 @@ function organizeMenu(menuItems) {
       }
     }
   });
-  
+
   return organizedMenu;
 }
 
@@ -356,7 +342,7 @@ router.get(
 router.get(
   "/users",
   authenticateToken,
-  checkPermission("user_management","enable", "view"),
+  checkPermission("user_management", "enable", "view"),
   async (req, res) => {
     const token = req.headers.authorization?.split(" ")[1];
 
@@ -401,11 +387,6 @@ router.get("/users/:id", authenticateToken, isAdmin, async (req, res) => {
 
     const user = rows[0];
 
-    // Optional: Prevent users from viewing others’ profiles (unless admin)
-    // if (req.user.role !== 'superadmin' && req.user.id !== userId) {
-    //   return res.status(403).json({ message: 'Access denied' });
-    // }
-
     res.status(200).json({ user });
   } catch (error) {
     console.error("Error fetching user profile:", error);
@@ -415,14 +396,14 @@ router.get("/users/:id", authenticateToken, isAdmin, async (req, res) => {
 
 router.post(
   "/users",
-  checkPermission("user_management","enable","create"),
+  checkPermission("user_management", "enable", "create"),
   async (req, res) => {}
 );
 
 router.put(
   "/users/:id",
   authenticateToken,
-  checkPermission("user_management","enable", "edit"),
+  checkPermission("user_management", "enable", "edit"),
   async (req, res) => {
     const { id } = req.params;
     const { name, email, password, role_id, role, image, status } = req.body;
@@ -485,7 +466,7 @@ router.put(
 router.delete(
   "/users/:id",
   authenticateToken,
-  checkPermission("user_management","enable", "delete"),
+  checkPermission("user_management", "enable", "delete"),
   async (req, res) => {
     const { id } = req.params;
     const token = req.headers.authorization?.split(" ")[1];
@@ -511,7 +492,7 @@ router.delete(
 
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       const adminId = decoded.id;
-      // const adminId = req.user.id;
+
       await logAudit(adminId, "DELETE", id, oldData, null);
 
       res.status(200).json({ message: "User deleted successfully" });
@@ -549,7 +530,7 @@ router.get("/search", authenticateToken, async (req, res) => {
 router.get(
   "/users/export/csv",
   authenticateToken,
-  checkPermission("user_management","enable", "export"),
+  checkPermission("user_management", "enable", "export"),
   async (req, res) => {
     try {
       const [users] = await pool.execute(
@@ -670,7 +651,7 @@ router.delete("/modules/:id", async (req, res) => {
 router.get(
   "/roles",
   authenticateToken,
-  checkPermission("role_management","enable", "view"),
+  checkPermission("role_management", "enable", "view"),
   async (req, res) => {
     try {
       const [roles] = await pool.execute("SELECT * FROM roles");
@@ -696,7 +677,7 @@ router.get(
 router.get(
   "/roles/:id",
   authenticateToken,
-  checkPermission("role_management","enable", "view"),
+  checkPermission("role_management", "enable", "view"),
   async (req, res) => {
     const { id } = req.params;
     try {
@@ -726,7 +707,7 @@ router.get(
 router.post(
   "/roles",
   authenticateToken,
-  checkPermission("role_management","enable", "create"),
+  checkPermission("role_management", "enable", "create"),
   async (req, res) => {
     const { name, permissions } = req.body;
 
@@ -743,7 +724,7 @@ router.post(
     try {
       await pool.execute(
         "INSERT INTO roles (name, permissions) VALUES (?, ?)",
-        [name, JSON.stringify(permissions)] // Store permissions as JSON string
+        [name, JSON.stringify(permissions)]
       );
       res.status(201).json({ message: "Role created successfully" });
     } catch (err) {
@@ -757,7 +738,7 @@ router.post(
 router.put(
   "/roles/:id",
   authenticateToken,
-  checkPermission("role_management", "enable","edit"),
+  checkPermission("role_management", "enable", "edit"),
   async (req, res) => {
     const { id } = req.params;
     const { name, permissions } = req.body;
@@ -797,7 +778,7 @@ router.put(
 router.delete(
   "/roles/:id",
   authenticateToken,
-  checkPermission("role_management","enable", "delete"),
+  checkPermission("role_management", "enable", "delete"),
   async (req, res) => {
     const { id } = req.params;
     try {
@@ -815,183 +796,255 @@ router.delete(
   }
 );
 
-// Menu route
-router.get("/menu",async (req, res) => {
-  const userRole = req.query.role;
+//menu route
 
-  const query = `
-    SELECT id, path, icon, title, roles, parent_id, status, time,order_by
+router.get(
+  "/menu",
+  authenticateToken,
+  checkPermission("menu_management", "enable", "view"),
+  async (req, res) => {
+    const userRole = req.query.role;
+    const showAll = req.query.showAll === "true";
+
+    let query = `
+    SELECT id, path, icon, title, roles, parent_id, status, time, order_by
     FROM menu_items
-    WHERE FIND_IN_SET(?, roles) > 0 AND status = 'active'
-    ORDER BY order_by ASC
+    WHERE FIND_IN_SET(?, roles) > 0
   `;
 
-  try {
-    const [results] = await pool.execute(query, [userRole]);
-    const organizedMenu = organizeMenu(results);
+    if (!showAll) {
+      query += ` AND status = 'active'`;
+    }
 
-    res.json(organizedMenu);
+    query += ` ORDER BY order_by ASC`;
+
+    try {
+      const [results] = await pool.execute(query, [userRole]);
+      const organizedMenu = organizeMenu(results);
+
+      res.json(organizedMenu);
+    } catch (err) {
+      console.error("Error fetching menu items:", err);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
+router.post(
+  "/menu",
+  authenticateToken,
+  checkPermission("menu_management", "enable", "create"),
+  async (req, res) => {
+    const { title, path, icon, roles, parent_id, status, order_by } = req.body;
+
+    const query = `INSERT INTO menu_items(title,path,icon,roles,parent_id,status,order_by,time)
+  VALUES(?,?,?,?,?,?,?,NOW())
+  `;
+
+    try {
+      const [result] = await pool.execute(query, [
+        title,
+        path,
+        icon,
+        roles,
+        parent_id || null,
+        status,
+        order_by || 0,
+      ]);
+      res.status(201).json({ id: result.insertId });
+    } catch (err) {
+      console.error("Error adding menu item:", err);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
+router.put(
+  "/menu/:id",
+  authenticateToken,
+  checkPermission("menu_management", "enable", "edit"),
+  async (req, res) => {
+    const { title, path, icon, roles, parent_id, status, order_by } = req.body;
+    const { id } = req.params;
+
+    const query = `
+  UPDATE menu_items
+  SET title = ? , path = ?,icon=?,roles =?,parent_id = ?,status =?,order_by = ?
+  WHERE id = ?
+  `;
+
+    try {
+      await pool.execute(query, [
+        title,
+        path,
+        icon,
+        roles,
+        parent_id || null,
+        status,
+        order_by || 0,
+        id,
+      ]);
+      res.status(200).json({ message: "Menu item updated" });
+    } catch (err) {
+      console.error("Error updating menu item:", err);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
+router.delete(
+  "/menu/:id",
+  authenticateToken,
+  checkPermission("menu_management", "enable", "delete"),
+  async (req, res) => {
+    const { id } = req.params;
+    try {
+      await pool.execute(`DELETE FROM menu_items WHERE id = ?`, [id]);
+    } catch (err) {
+      console.error("Error deleting menu items:", err);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
+router.patch("/menu/:id/status", async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  try {
+    await pool.execute(`UPDATE menu_items SET status = ? WHERE id = ?`, [
+      status,
+      id,
+    ]);
+    res.status(200).json({ message: `Menu item status set to ${status}` });
   } catch (err) {
-    console.error("Error fetching menu items:", err);
+    console.error("Error updating menu item status:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-
 //categories
 
-router.get('/categories', authenticateToken,
-  checkPermission("category","enable", "view"),
-  async (req, res) => {
-  try {
-    const [rows] = await pool.execute('SELECT * FROM category');
-    res.json(rows);
-  } catch (error) {
-    console.error('Error fetching categories:', error);
-    res.status(500).send('Server Error');
-  }
-});
-
-
-router.post('/categories', authenticateToken,
-  checkPermission("category","enable", "create"), 
-  async (req, res) => {
-  const { category_name, description } = req.body;
-
-  if (!category_name || !description) {
-    return res.status(400).json({ error: 'Category_Name and description are required' });
-  }
-
-  try {
-    const [result] = await pool.execute(
-      'INSERT INTO category (category_name, description) VALUES (?, ?)',
-      [category_name, description]
-    );
-
-   
-    const newCategory = {
-      id: result.insertId,
-      category_name,
-      description,
-    };
-
-    res.status(201).json(newCategory);
-  } catch (error) {
-    console.error('Error creating category:', error);
-    res.status(500).json({ error: 'Error creating category' });
-  }
-});
-
-router.put('/categories/:id', 
+router.get(
+  "/categories",
   authenticateToken,
-  checkPermission("category", "enable", "edit"), 
+  checkPermission("category", "enable", "view"),
+  async (req, res) => {
+    try {
+      const [rows] = await pool.execute("SELECT * FROM category");
+      res.json(rows);
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+      res.status(500).send("Server Error");
+    }
+  }
+);
+
+router.post(
+  "/categories",
+  authenticateToken,
+  checkPermission("category", "enable", "create"),
+  async (req, res) => {
+    const { category_name, description } = req.body;
+
+    if (!category_name || !description) {
+      return res
+        .status(400)
+        .json({ error: "Category_Name and description are required" });
+    }
+
+    try {
+      const [result] = await pool.execute(
+        "INSERT INTO category (category_name, description) VALUES (?, ?)",
+        [category_name, description]
+      );
+
+      const newCategory = {
+        id: result.insertId,
+        category_name,
+        description,
+      };
+
+      res.status(201).json(newCategory);
+    } catch (error) {
+      console.error("Error creating category:", error);
+      res.status(500).json({ error: "Error creating category" });
+    }
+  }
+);
+
+router.put(
+  "/categories/:id",
+  authenticateToken,
+  checkPermission("category", "enable", "edit"),
   async (req, res) => {
     const { id } = req.params;
     const { category_name, description } = req.body;
 
     if (!category_name || !description) {
-      return res.status(400).json({ error: 'Category_Name and description are required' });
+      return res
+        .status(400)
+        .json({ error: "Category_Name and description are required" });
     }
 
     try {
       const [result] = await pool.execute(
-        'UPDATE category SET category_name = ?, description = ? WHERE id = ?',
+        "UPDATE category SET category_name = ?, description = ? WHERE id = ?",
         [category_name, description, id]
       );
 
       if (result.affectedRows === 0) {
-        return res.status(404).json({ error: 'Category not found' });
+        return res.status(404).json({ error: "Category not found" });
       }
 
-      res.status(200).json({ 
-        message: 'Category updated successfully',
-        category: { id, category_name, description }
+      res.status(200).json({
+        message: "Category updated successfully",
+        category: { id, category_name, description },
       });
     } catch (error) {
-      console.error('Error updating category:', error);
-      res.status(500).json({ error: 'Error updating category' });
+      console.error("Error updating category:", error);
+      res.status(500).json({ error: "Error updating category" });
     }
-});
-
-
-
-router.delete('/categories/:id',authenticateToken,
-  checkPermission("category","enable", "delete"),
-   async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    const [result] = await pool.execute('DELETE FROM category WHERE id = ?', [id]);
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'Category not found' });
-    }
-
-    res.json({ message: 'Category deleted successfully' });
-  } catch (error) {
-    console.error('Error deleting category:', error);
-    res.status(500).json({ error: 'Server error while deleting category' });
   }
-});
+);
 
+router.delete(
+  "/categories/:id",
+  authenticateToken,
+  checkPermission("category", "enable", "delete"),
+  async (req, res) => {
+    const { id } = req.params;
 
+    try {
+      const [result] = await pool.execute("DELETE FROM category WHERE id = ?", [
+        id,
+      ]);
 
-//complaints
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: "Category not found" });
+      }
 
-// router.get('/complaints', 
-//   authenticateToken,
-//   checkPermission("complaint_management","enable", "view"),
-//   async (req, res) => {
-//     try {
-//       const userId = req.user.id;
-//  const complaintId = req.params.id;
-//       const [rows] = await pool.execute(
-    
-//   `SELECT * FROM complaints WHERE id = ? AND user_id = ?`,
-//   [complaintId, userId]
-// );
+      res.json({ message: "Category deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting category:", error);
+      res.status(500).json({ error: "Server error while deleting category" });
+    }
+  }
+);
 
-//       res.status(200).json(rows);
-//     } catch (err) {
-//       console.error('Error fetching complaints:', err);
-//       res.status(500).json({ message: 'Error retrieving complaints' });
-//     }
-// });
-
-
-// router.get('/complaints', 
-//   authenticateToken,
-//   checkPermission("complaint_management","enable", "view"),
-//   async (req, res) => {
-//     try {
-//       const userId = req.user.id;
-//       // Fetch all complaints for this user
-//       const [rows] = await pool.execute(
-//   `SELECT * FROM complaints WHERE user_id = ? ORDER BY created_at DESC`,
-//   [userId]
-// );
-
-
-//       res.status(200).json(rows);
-//     } catch (err) {
-//       console.error('Error fetching complaints:', err);
-//       res.status(500).json({ message: 'Error retrieving complaints' });
-//     }
-// });
-
-
-router.get('/complaints', 
+router.get(
+  "/complaints",
   authenticateToken,
   checkPermission("complaint_management", "enable", "view"),
   async (req, res) => {
     try {
       const userId = req.user.id;
-      const role = req.user.role; // Assuming role is set in the token
+      const role = req.user.role;
 
       let query = `SELECT * FROM complaints`;
       let params = [];
 
-      if (role !== 'Super Admin' && role !== 'Admin') {
+      if (role !== "Super Admin" && role !== "Admin") {
         query += ` WHERE user_id = ?`;
         params.push(userId);
       }
@@ -1002,41 +1055,14 @@ router.get('/complaints',
 
       res.status(200).json(rows);
     } catch (err) {
-      console.error('Error fetching complaints:', err);
-      res.status(500).json({ message: 'Error retrieving complaints' });
+      console.error("Error fetching complaints:", err);
+      res.status(500).json({ message: "Error retrieving complaints" });
     }
-});
+  }
+);
 
-
-
-
-
-// router.get('/complaints/:id',
-//   authenticateToken,
-//   checkPermission("complaint_management","enable", "view"),
-//   async (req, res) => {
-//     const complaintId = req.params.id;
-//     const userId = req.user.id;
-
-//     try {
-//     const [rows] = await pool.execute(
-//   `SELECT * FROM complaints WHERE id = ? AND user_id = ?`,
-//   [complaintId, userId]
-// );
-
-
-//       if (rows.length === 0) {
-//         return res.status(404).json({ message: 'Complaint not found' });
-//       }
-
-//       res.status(200).json(rows[0]);
-//     } catch (err) {
-//       console.error('Error fetching complaint:', err);
-//       res.status(500).json({ message: 'Error retrieving complaint' });
-//     }
-// });
-
-router.get('/complaints/:id',
+router.get(
+  "/complaints/:id",
   authenticateToken,
   checkPermission("complaint_management", "enable", "view"),
   async (req, res) => {
@@ -1048,7 +1074,7 @@ router.get('/complaints/:id',
       let query = `SELECT * FROM complaints WHERE id = ?`;
       let params = [complaintId];
 
-      if (role !== 'Super Admin' && role !== 'Admin') {
+      if (role !== "Super Admin" && role !== "Admin") {
         query += ` AND user_id = ?`;
         params.push(userId);
       }
@@ -1056,20 +1082,20 @@ router.get('/complaints/:id',
       const [rows] = await pool.execute(query, params);
 
       if (rows.length === 0) {
-        return res.status(404).json({ message: 'Complaint not found' });
+        return res.status(404).json({ message: "Complaint not found" });
       }
 
       res.status(200).json(rows[0]);
     } catch (err) {
-      console.error('Error fetching complaint:', err);
-      res.status(500).json({ message: 'Error retrieving complaint' });
+      console.error("Error fetching complaint:", err);
+      res.status(500).json({ message: "Error retrieving complaint" });
     }
-});
+  }
+);
 
-
-
-router.post('/complaints',
-  upload.single('image'),
+router.post(
+  "/complaints",
+  upload.single("image"),
   authenticateToken,
   checkPermission("complaint_management", "enable", "create"),
   async (req, res) => {
@@ -1093,16 +1119,13 @@ router.post('/complaints',
         description,
         image,
         mobileNumber,
-        createdAt: new Date()
+        createdAt: new Date(),
       });
-
     } catch (err) {
-      console.error('Error inserting complaint:', err);
-      res.status(500).json({ message: 'Error saving complaint' });
+      console.error("Error inserting complaint:", err);
+      res.status(500).json({ message: "Error saving complaint" });
     }
   }
 );
-
-
 
 export default router;
