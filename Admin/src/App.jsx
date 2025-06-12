@@ -28,6 +28,8 @@ import Complaint from "./pages/Complaint.jsx";
 import { Toaster } from 'react-hot-toast';
 // import MenuManager from "./pages/MenuManagement.jsx";
 import MenuManagement from "./pages/MenuManagement.jsx";
+import ForgotPassword from "./pages/ForgotPassword.jsx";
+import ResetPassword from "./pages/ResetPassword.jsx";
 // import { ComplaintProvider } from "./context/ComplaintContext.jsx"; // Adjust path if needed
 
 
@@ -37,9 +39,13 @@ function App() {
   return (
     <Router>
             <Toaster position="top-right" reverseOrder={false} />
-      {/* <ComplaintProvider> ✅ Add this wrapper here */}
+     
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          {/* <Route path="/reset-password" element={<ResetPassword />} /> */}
+          <Route path="/reset-password/:token" element={<ResetPassword />} />
           <Route path="/register" element={<Register />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/users/:id" element={<UserProfile />} />
@@ -70,7 +76,7 @@ function App() {
             </>
           )}
         </Routes>
-      {/* </ComplaintProvider> */}
+     
     </Router>
   );
 }

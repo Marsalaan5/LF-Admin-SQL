@@ -87,12 +87,43 @@ function UserProfile() {
   if (!user) return <div className="text-center mt-5">Loading...</div>;
 
   return (
-    <div className="container mt-5">
+
+     <div className="container mt-5 p-2">
+      {/* Header */}
+      {/* <div className="row mb-4 align-items-center">
+        <div className="d-flex col-md-6">
+          <h1 className="m-0 text-dark">User Profile</h1>
+        </div>
+        <div className="col-md-6 text-md-end">
+          <ol className="breadcrumb justify-content-md-end mb-0">
+            <li className="breadcrumb-item">
+              <a href="/">Home</a>
+            </li>
+            <li className="breadcrumb-item active">User-Profile-Management</li>
+          </ol>
+        </div>
+      </div> */}
+         {/* <div className="container-fluid mt-5 p-2 border shadow-sm"> */}
+      <div className="p-4 d-flex justify-content-between align-items-center">
+        <div className="col-sm-6">
+          <h1 className="m-0 text-dark">User Profile</h1>
+          <div className="col-sm-6">
+            <ol className="breadcrumb float-sm-right">
+              <li className="breadcrumb-item">
+                <a href="/">Home</a>
+              </li>
+              <li className="breadcrumb-item active">User-Profile-View</li>
+            </ol>
+          </div>
+        </div>
+        </div>
+
+      {/* Profile Card */}
       <div className="card shadow-sm p-4">
         <div className="d-flex align-items-center mb-4">
           <img
             src={userr}
-            // alt={user.name}
+            alt={user.name}
             className="rounded-circle me-4"
             style={{ width: "100px", height: "100px", objectFit: "cover" }}
           />
@@ -135,19 +166,21 @@ function UserProfile() {
           </div>
         </div>
 
-        {/* <div className="row mb-4">
+        {/* Optional failed login attempts */}
+        {/* <div className="row mb-3">
           <div className="col-md-6">
-            <strong>Failed Login Attempts:</strong>{" "}
-            {user.failedLoginAttempts ?? 0}
+            <strong>Failed Login Attempts:</strong> {user.failedLoginAttempts ?? 0}
           </div>
         </div> */}
 
-        <button className="btn btn-secondary" onClick={() => navigate(-1)}>
-          &larr; Back
-        </button>
+        <div className="text-end">
+          <button className="btn btn-secondary" onClick={() => navigate(-1)}>
+            &larr; Back
+          </button>
+        </div>
       </div>
     </div>
   );
 }
 
-export default UserProfile;
+export default UserProfile

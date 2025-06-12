@@ -4,6 +4,7 @@ import { AuthContext } from "../context/AuthContext.jsx";
 import { useNavigate } from "react-router-dom";
 import "@fortawesome/fontawesome-free/css/all.min.css";
 import Pagination from "react-bootstrap/Pagination";
+import { roleHierarchy } from "../../../backend/utils/roleHierarchy.js";
 
 function UserManagement() {
   const { token, user } = useContext(AuthContext);
@@ -20,6 +21,8 @@ function UserManagement() {
   const [message, setMessage] = useState("");
   const [editUser, setEditUser] = useState(null);
   const [excelFile, setExcelFile] = useState(null);
+  const [statuses, setStatuses] = useState([]);
+
 
   const navigate = useNavigate();
 
@@ -39,6 +42,7 @@ function UserManagement() {
     }
     fetchUsers();
     fetchRoles();
+    fetchStatuses();
   }, [token]);
 
   useEffect(() => {
@@ -55,7 +59,9 @@ function UserManagement() {
       const res = await axios.get("http://localhost:5001/auth/users", {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setUsers(res.data.users);
+        const sortedUsers = res.data.users.sort((a, b) => b.id - a.id);
+    setUsers(sortedUsers);
+      // setUsers(res.data.users);
       console.log("Fetched users:", res.data.users);
     } catch (err) {
       console.error("Failed to load users", err);
@@ -75,15 +81,37 @@ function UserManagement() {
     }
   };
 
+const fetchStatuses = async () => {
+  try {
+    const res = await axios.get("http://localhost:5001/auth/status-options", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    setStatuses(res.data);
+  } catch (err) {
+    console.error("Failed to fetch statuses", err);
+  }
+};
+
+
   const handleAddUser = async (e) => {
     e.preventDefault();
     setLoading(true);
     setMessage("");
 
     try {
+
+      if (roleHierarchy[newUser.role] >= roleHierarchy[user.role]) {
+  setMessage("You can't assign a role higher or equal to your own.");
+  return;
+}
+
       await axios.post("http://localhost:5001/auth/register", newUser, {
         headers: { Authorization: `Bearer ${token}` },
       });
+
+    //       const createdUser = res.data.user; 
+
+    // setUsers(prevUsers => [createdUser, ...prevUsers]);
       setMessage("User added successfully!");
       setNewUser({ name: "", email: "", password: "", role: "" });
       fetchUsers();
@@ -95,16 +123,18 @@ function UserManagement() {
     }
   };
 
-  // const handleEditUser = (user) => {
-  //   setEditUser(user);
-  // };
 
-  const handleEditUser = (user) => {
-    setEditUser({
-      ...user,
-      role_id: roles.find((r) => r.name === user.role)?.id || "",
-    });
-  };
+  const handleEditUser = (targetUser) => {
+  if (roleHierarchy[targetUser.role] >= roleHierarchy[user.role]) {
+    setMessage("You can't edit users with a higher or equal role.");
+    return;
+  }
+
+  setEditUser({
+    ...targetUser,
+    role_id: roles.find((r) => r.name === targetUser.role)?.id || "",
+  });
+};
 
 
   const handleUpdateUser = async (e) => {
@@ -131,19 +161,49 @@ function UserManagement() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this user?")) return;
-    try {
-      await axios.delete(`http://localhost:5001/auth/users/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setMessage("User deleted.");
-      fetchUsers();
-    } catch (err) {
-      console.error(err);
-      setMessage("Error deleting user.");
-    }
-  };
+
+//   const handleDelete = async (id,targetUser) => {
+//     if (!window.confirm("Are you sure you want to delete this user?")) return;
+
+//     try {
+//       await axios.delete(`http://localhost:5001/auth/users/${id}`, {
+//         headers: { Authorization: `Bearer ${token}` },
+//       });
+//       setMessage("User deleted.");
+//       fetchUsers();
+//     } catch (err) {
+//       console.error(err);
+//       setMessage("Error deleting user.");
+//     }
+//   };
+
+
+const handleDelete = async (id, targetUser) => {
+  if (!window.confirm("Are you sure you want to delete this user?")) return;
+
+
+  if (!user?.role || !targetUser?.role) {
+    setMessage("Missing role information.");
+    return;
+  }
+
+  if (roleHierarchy[targetUser.role] >= roleHierarchy[user.role]) {
+    setMessage("You can't delete users with a higher or equal role.");
+    return;
+  }
+
+  try {
+    await axios.delete(`http://localhost:5001/auth/users/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    setMessage("User deleted.");
+    fetchUsers(); 
+  } catch (err) {
+    console.error(err);
+    setMessage("Error deleting user.");
+  }
+};
+
 
 
   const handleExcelExport = async () => {
@@ -279,25 +339,37 @@ function UserManagement() {
                       }
                       required
                     >
-                      <option value="">Select Role</option>
+                      {/* <option value="">Select Role</option>
                       {roles.map((role) => (
                         <option key={role.id} value={role.name}>
                           {role.name}
-                        </option>
-                      ))}
+                        </option> */}
+                        {roles
+  .filter((r) => roleHierarchy[r.name] < roleHierarchy[user.role])
+  .map((role) => (
+    <option key={role.id} value={role.name}>
+      {role.name}
+    </option>
+  ))}
+
+                  
                     </select>
                   </div>
                   <div className="col-md-6">
-                    <select
-                      className="form-control"
-                      value={newUser.status}
-                      onChange={(e) =>
-                        setNewUser({ ...newUser, status: e.target.value })
-                      }
-                    >
-                      <option value="active">Active</option>
-                      <option value="inactive">Inactive</option>
-                    </select>
+                   <select
+  className="form-control"
+  value={newUser.status}
+  onChange={(e) =>
+    setNewUser({ ...newUser, status: e.target.value })
+  }
+>
+  {statuses.map((status) => (
+    <option key={status} value={status}>
+      {status.charAt(0).toUpperCase() + status.slice(1)}
+    </option>
+  ))}
+</select>
+
                   </div>
                 </div>
               </div>
@@ -367,6 +439,7 @@ function UserManagement() {
                           setEditUser({ ...editUser, email: e.target.value })
                         }
                         required
+                        
                       />
                     </div>
                     <div className="col-md-6">
@@ -404,26 +477,37 @@ function UserManagement() {
                         }}
                         required
                       >
-                        <option value="">Select Role</option>
+                        {/* <option value="">Select Role</option>
                         {roles.map((role) => (
                           <option key={role.id} value={role.name}>
                             {role.name}
-                          </option>
+                          </option> */}
+                            {roles
+  .filter((r) => roleHierarchy[r.name] < roleHierarchy[user.role])
+  .map((role) => (
+    <option key={role.id} value={role.name}>
+      {role.name}
+    </option>
+
                         ))}
                       </select>
                     </div>
                     <div className="col-md-6">
-                      <select
-                        className="form-control"
-                        value={editUser.status}
-                        onChange={(e) =>
-                          setEditUser({ ...editUser, status: e.target.value })
-                        }
-                        required
-                      >
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
-                      </select>
+                     <select
+  className="form-control"
+  value={editUser.status}
+  onChange={(e) =>
+    setEditUser({ ...editUser, status: e.target.value })
+  }
+>
+  {statuses.map((status) => (
+    <option key={status} value={status}>
+      {status.charAt(0).toUpperCase() + status.slice(1)}
+    </option>
+  ))}
+</select>
+
+
                     </div>
                   </div>
                 </div>
@@ -550,7 +634,7 @@ function UserManagement() {
 
                     <button
                       className="btn btn-outline-danger btn-sm ms-2"
-                      onClick={() => handleDelete(userInTable.id)}
+                      onClick={() => handleDelete(userInTable.id, userInTable)}
                       title="Delete"
                     >
                       <i className="fas fa-trash-alt"></i>

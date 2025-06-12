@@ -1,17 +1,22 @@
 import multer from "multer";
 import express from "express";
 import bcrypt from "bcryptjs";
+import crypto from 'crypto'
 import jwt from "jsonwebtoken";
 import { pool, io } from "../server.js";
 import { authenticateToken, isAdmin } from "../middleware/authMiddleware.js";
 import moduleConfig from "../config/moduleConfig.js";
 import { checkPermission } from "../middleware/checkPermission.js";
+import { createUser } from "../controller/userController.js";
 import fs from "fs";
 import path from "path";
 import csv from "csv-parser";
 import { Parser } from "json2csv";
 import XLSX from "xlsx";
 import { fileURLToPath } from "url";
+import Joi from "joi";
+import nodemailer from 'nodemailer';
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,6 +24,8 @@ const __dirname = path.dirname(__filename);
 const router = express.Router();
 
 const uploadDir = path.join(__dirname, "uploads");
+
+
 
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir);
@@ -102,78 +109,188 @@ const logAudit = async (
   }
 };
 
+
+const registerSchema = Joi.object({
+  name: Joi.string().min(3).max(50).required(),
+  email: Joi.string().email().required(),
+  password: Joi.string()
+    .min(8)
+    .max(128)
+    .pattern(new RegExp('^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).+')) 
+    .required(),
+  role: Joi.string().valid('user', 'admin','super admin','viewer').insensitive()
+    .required().default('user'),
+  status: Joi.string().valid('active', 'inactive').default('active'),
+}).prefs({ convert: true });;
+
+// const loginSchema = Joi.object({
+//   email: Joi.string().email().required(),
+//   password: Joi.string().required(),
+// });
+
 router.use("/uploads", express.static(uploadDir));
 // GET /modules
 router.get("/modules", (req, res) => {
   res.json(moduleConfig);
 });
 
-router.post("/register", upload.single("image"), async (req, res) => {
-  if (req.fileValidationError) {
-    return res.status(400).json({ message: req.fileValidationError });
-  }
 
-  const { name, email, password, role = "user", status = "active" } = req.body;
-  const image = req.file ? req.file.path : null;
-  const token = req.headers.authorization?.split(" ")[1];
+// //register
+// router.post("/register",authenticateToken,createUser, upload.single("image"), async (req, res) => {
+//   if (req.fileValidationError) {
+//     return res.status(400).json({ message: req.fileValidationError });
+//   }
 
-  try {
-    const [roleResult] = await pool.execute(
-      "SELECT id FROM roles WHERE name = ?",
-      [role]
-    );
+//   const { error, value } = registerSchema.validate(req.body);
+//     if (error) {
+//       return res.status(400).json({ message: error.details[0].message });
+//     }
 
-    if (roleResult.length === 0) {
-      return res.status(400).json({ message: "Invalid role" });
+//   const { name, email, password, role = "user", status = "active" } = req.body;
+//   const image = req.file ? req.file.path : null;
+//   const token = req.headers.authorization?.split(" ")[1];
+
+//   try {
+//     const [roleResult] = await pool.execute(
+//       "SELECT id FROM roles WHERE name = ?",
+//       [role]
+//     );
+
+//     if (roleResult.length === 0) {
+//       return res.status(400).json({ message: "Invalid role" });
+//     }
+
+//     const roleId = roleResult[0].id;
+
+//     const [existingUser] = await pool.execute(
+//       "SELECT * FROM login WHERE email = ?",
+//       [email]
+//     );
+
+//     if (existingUser.length > 0) {
+//       return res.status(400).json({ message: "User already exists" });
+//     }
+
+//     const salt = await bcrypt.genSalt(10);
+//     const hashedPassword = await bcrypt.hash(password, salt);
+
+//     const [result] = await pool.execute(
+//       "INSERT INTO login (name, email, password, role_id, role, image, insert_time, status) VALUES (?, ?, ?, ?,?, ?, CURRENT_TIMESTAMP, ?)",
+//       [name, email, hashedPassword, roleId, role, image, status]
+//     );
+//     console.log("Audit INSERT result:", result);
+
+//     io.emit("new-signup", { name, email });
+
+//     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+//     const adminId = decoded.id;
+//     await logAudit(adminId, "INSERT", result.insertId, null, {
+//       name,
+//       email,
+//       role_id: roleId,
+//       role,
+//       image,
+//       status,
+//     });
+
+//     res.status(201).json({
+//       message: "User registered successfully",
+//       userId: result.insertId,
+//     });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ message: "Something went wrong" });
+//   }
+// });
+
+router.post(
+  "/register",
+  authenticateToken,
+  upload.single("image"), // upload first
+  async (req, res) => {
+    // Image validation
+    if (req.fileValidationError) {
+      return res.status(400).json({ message: req.fileValidationError });
     }
 
-    const roleId = roleResult[0].id;
-
-    const [existingUser] = await pool.execute(
-      "SELECT * FROM login WHERE email = ?",
-      [email]
-    );
-
-    if (existingUser.length > 0) {
-      return res.status(400).json({ message: "User already exists" });
+    // Validate body with Joi
+    const { error, value } = registerSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ message: error.details[0].message });
     }
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    const { name, email, password, role = "user", status = "active" } = value;
+    const image = req.file ? req.file.path : null;
+    const token = req.headers.authorization?.split(" ")[1];
 
-    const [result] = await pool.execute(
-      "INSERT INTO login (name, email, password, role_id, role, image, insert_time, status) VALUES (?, ?, ?, ?,?, ?, CURRENT_TIMESTAMP, ?)",
-      [name, email, hashedPassword, roleId, role, image, status]
-    );
-    console.log("Audit INSERT result:", result);
+    try {
+      // Check if role is valid
+      const [roleResult] = await pool.execute(
+        "SELECT id FROM roles WHERE name = ?",
+        [role]
+      );
+      if (roleResult.length === 0) {
+        return res.status(400).json({ message: "Invalid role" });
+      }
+      const roleId = roleResult[0].id;
 
-    io.emit("new-signup", { name, email });
+      // Check for existing user
+      const [existingUser] = await pool.execute(
+        "SELECT * FROM login WHERE email = ?",
+        [email]
+      );
+      if (existingUser.length > 0) {
+        return res.status(409).json({ message: "User already exists" });
+      }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const adminId = decoded.id;
-    await logAudit(adminId, "INSERT", result.insertId, null, {
-      name,
-      email,
-      role_id: roleId,
-      role,
-      image,
-      status,
-    });
+      // Hash password
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
 
-    res.status(201).json({
-      message: "User registered successfully",
-      userId: result.insertId,
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Something went wrong" });
+      // Insert user
+      const [result] = await pool.execute(
+        "INSERT INTO login (name, email, password, role_id, role, image, insert_time, status) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)",
+        [name, email, hashedPassword, roleId, role, image, status]
+      );
+
+
+      io.emit("new-signup", { name, email });
+
+      // Audit log
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const adminId = decoded.id;
+      await logAudit(adminId, "INSERT", result.insertId, null, {
+        name,
+        email,
+        role_id: roleId,
+        role,
+        image,
+        status,
+      });
+
+      // Respond
+      res.status(201).json({
+        message: "User registered successfully",
+        userId: result.insertId,
+      });
+    } catch (err) {
+      console.error("User registration error:", err);
+      res.status(500).json({ message: "Something went wrong" });
+    }
   }
-});
+);
+
 
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
   try {
+
+    //  const { error, value } = loginSchema.validate(req.body);
+    // if (error) {
+    //   return res.status(400).json({ message: 'Invalid email or password' });
+    // }
+
     const [userRows] = await pool.execute(
       "SELECT * FROM login WHERE email = ?",
       [email]
@@ -184,6 +301,12 @@ router.post("/login", async (req, res) => {
     }
 
     const user = userRows[0];
+
+if (user.status !== "active") {
+  return res.status(403).json({ message: "Your account is inactive." });
+}
+
+
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(401).json({ message: "Invalid email or password" });
@@ -241,6 +364,71 @@ router.post("/login", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Something went wrong" });
+  }
+});
+
+
+
+//  password reset link
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const [users] = await pool.execute('SELECT * FROM login WHERE email = ?', [email]);
+    if (users.length === 0) return res.status(400).json({ message: 'No user found with that email' });
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiry = new Date(Date.now() + 3600000); 
+
+    await pool.execute('UPDATE login SET reset_token = ?, reset_token_expiry = ? WHERE email = ?', [
+      token,
+      expiry,
+      email,
+    ]);
+
+    const resetLink = `http://localhost:5173/reset-password/${token}`;
+
+    const transporter = nodemailer.createTransport({
+      service: 'Gmail',
+      auth: {
+        user: process.env.EMAIL_ID,
+        pass: process.env.EMAIL_PASSWORD,
+      },
+    });
+
+    await transporter.sendMail({
+      to: email,
+      subject: 'Password Reset Request',
+      html: `<p>Click the link below to reset your password:</p><a href="${resetLink}">${resetLink}</a>`,
+    });
+
+    res.json({ message: 'Password reset link sent to your email' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+//  password with token
+router.post('/reset-password/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { password } = req.body;
+
+    const [users] = await pool.execute('SELECT * FROM login WHERE reset_token = ? AND reset_token_expiry > NOW()', [token]);
+    if (users.length === 0) return res.status(400).json({ message: 'Invalid or expired token' });
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    await pool.execute('UPDATE login SET password = ?, reset_token = NULL, reset_token_expiry = NULL WHERE id = ?', [
+      hashedPassword,
+      users[0].id,
+    ]);
+
+    res.json({ message: 'Password has been reset successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -503,6 +691,13 @@ router.delete(
   }
 );
 
+
+// GET /auth/status-options
+router.get("/status-options", authenticateToken, (req, res) => {
+  res.json(["active", "inactive"]);
+});
+
+
 // Search users by name or role
 router.get("/search", authenticateToken, async (req, res) => {
   const searchTerm = req.query.q;
@@ -516,6 +711,7 @@ router.get("/search", authenticateToken, async (req, res) => {
       `SELECT id, name, email, role, role_id, image, status
        FROM login
        WHERE name LIKE ? OR role LIKE ?`,
+  
       [`%${searchTerm}%`, `%${searchTerm}%`]
     );
 
@@ -796,7 +992,8 @@ router.delete(
   }
 );
 
-//menu route
+//
+// route
 
 router.get(
   "/menu",
@@ -1032,6 +1229,9 @@ router.delete(
   }
 );
 
+
+//compalints
+
 router.get(
   "/complaints",
   authenticateToken,
@@ -1057,6 +1257,45 @@ router.get(
     } catch (err) {
       console.error("Error fetching complaints:", err);
       res.status(500).json({ message: "Error retrieving complaints" });
+    }
+  }
+);
+
+
+router.get(
+  "/complaints/status-options",
+  authenticateToken,
+  checkPermission("complaint_management", "enable", "view"),
+  async (req, res) => {
+    try {
+      // MySQL does not provide ENUM values via regular query, so extract them from information_schema
+      const [rows] = await pool.execute(`
+        SELECT COLUMN_TYPE 
+        FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_NAME = 'complaints' AND COLUMN_NAME = 'status'
+      `);
+
+      if (rows.length === 0) {
+        return res.status(500).json({ message: "Status column not found" });
+      }
+
+      // Extract enum values from: enum('open','closed')
+      const enumStr = rows[0].COLUMN_TYPE;
+      const matches = enumStr.match(/enum\((.*)\)/i);
+
+      if (!matches) {
+        return res.status(500).json({ message: "Could not parse ENUM values" });
+      }
+
+      const values = matches[1]
+        .split(",")
+        .map(val => val.trim().replace(/^'(.*)'$/, "$1")) 
+        .map((status, idx) => ({ id: idx + 1, status }));
+
+      res.status(200).json(values);
+    } catch (err) {
+      console.error("Error fetching status options:", err);
+      res.status(500).json({ message: "Error retrieving status options" });
     }
   }
 );
@@ -1093,6 +1332,9 @@ router.get(
   }
 );
 
+
+
+
 router.post(
   "/complaints",
   upload.single("image"),
@@ -1106,9 +1348,9 @@ router.post(
     try {
       const [insertResult] = await pool.execute(
         `INSERT INTO complaints 
-          (user_id, title, categories, description, image, mobileNumber)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [userId, title, categories, description, image, mobileNumber || null]
+          (user_id, title, categories, description, image, mobileNumber,status)
+         VALUES (?, ?, ?, ?, ?, ?,?)`,
+        [userId, title, categories, description, image, mobileNumber || null ,'open']
       );
 
       res.status(200).json({
@@ -1119,6 +1361,7 @@ router.post(
         description,
         image,
         mobileNumber,
+        status:'open',
         createdAt: new Date(),
       });
     } catch (err) {
@@ -1127,5 +1370,62 @@ router.post(
     }
   }
 );
+
+router.put(
+  "/complaints/:id/status",
+  authenticateToken,
+  checkPermission("complaint_management", "enable", "update"),
+  async (req, res) => {
+    const complaintId = req.params.id;
+    const { status } = req.body;
+
+    try {
+      // Fetch ENUM values from MySQL schema
+      const [rows] = await pool.execute(`
+        SELECT COLUMN_TYPE 
+        FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_NAME = 'complaints' AND COLUMN_NAME = 'status'
+      `);
+
+      if (rows.length === 0) {
+        return res.status(500).json({ message: "Status column not found" });
+      }
+
+      const enumStr = rows[0].COLUMN_TYPE;
+      const matches = enumStr.match(/enum\((.*)\)/i);
+
+      if (!matches) {
+        return res.status(500).json({ message: "Could not parse ENUM values" });
+      }
+
+      const validStatuses = matches[1]
+        .split(",")
+        .map((val) => val.trim().replace(/^'(.*)'$/, "$1")); // remove quotes
+
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({ message: "Invalid status value" });
+      }
+
+      const [result] = await pool.execute(
+        `UPDATE complaints SET status = ? WHERE id = ?`,
+        [status, complaintId]
+      );
+
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ message: "Complaint not found" });
+      }
+
+      res.status(200).json({ message: "Status updated", status });
+    } catch (err) {
+      console.error("Error updating status:", err);
+      res.status(500).json({ message: "Error updating complaint status" });
+    }
+  }
+);
+
+
+
+
+
 
 export default router;

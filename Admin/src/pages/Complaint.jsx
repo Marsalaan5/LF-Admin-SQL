@@ -68,7 +68,7 @@ function Complaint() {
     const formData = new FormData();
     formData.append("title", title);
     formData.append("mobileNumber", mobileNumber);
-    formData.append("categories", categories); // sending category ID now
+    formData.append("categories", categories); 
     formData.append("description", description);
     if (image) {
       formData.append("image", image);
@@ -111,10 +111,27 @@ function Complaint() {
   return (
     // <div className="container-fluid mt-5 p-2 border shadow-sm" style={{ maxWidth: '600px', margin: 'auto' }}>
     //   <div className="p-4 d-flex justify-content-between align-items-center">
+    
+    <div className="container-fluid mt-5 p-2">
+  <div className="p-4 d-flex justify-content-between align-items-center">
+        <div className="col-sm-6">
+          <h1 className="m-0 text-dark">Complaint Form</h1>
+          <div className="col-sm-6">
+            <ol className="breadcrumb float-sm-right">
+              <li className="breadcrumb-item">
+                <a href="/">Home</a>
+              </li>
+              <li className="breadcrumb-item active">Complaint-Form</li>
+            </ol>
+          </div>
+        </div>
+        </div>
+
+
     <div
       className="container-fluid p-2 border shadow-sm"
-      style={{ maxWidth: "600px", marginTop: "100px" }}
-    >
+      style={{ maxWidth: "600px" }}
+      >
       <div className="p-4 ">
         <h1 className="m-0 text-dark text-center">Complaint Form</h1>
       </div>
@@ -136,7 +153,7 @@ function Complaint() {
             placeholder="Enter Title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-          />
+            />
         </div>
 
         <div className="mb-3">
@@ -163,7 +180,7 @@ function Complaint() {
             className="form-control"
             value={categories}
             onChange={(e) => setCategories(e.target.value)}
-          >
+            >
             <option value="">Select a Category</option>
             {categoryList.map((cat) => (
               <option key={cat.id} value={cat.id}>
@@ -184,7 +201,7 @@ function Complaint() {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={4}
-          />
+            />
         </div>
 
         <div className="mb-3">
@@ -197,7 +214,7 @@ function Complaint() {
             className="form-control"
             onChange={handleFileChange}
             accept="image/*"
-          />
+            />
         </div>
 
         {preview && (
@@ -210,7 +227,7 @@ function Complaint() {
                 maxHeight: "200px",
                 objectFit: "contain",
               }}
-            />
+              />
           </div>
         )}
 
@@ -218,11 +235,12 @@ function Complaint() {
           type="submit"
           className="btn btn-primary w-100"
           disabled={loading}
-        >
+          >
           {loading ? "Submitting..." : "Submit Complaint"}
         </button>
       </form>
     </div>
+          </div>
   );
 }
 

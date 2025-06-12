@@ -3,6 +3,7 @@
 // import axios from "axios";
 // import Pagination from "react-bootstrap/Pagination";
 // import { AuthContext } from "../context/AuthContext";
+// import toast from "react-hot-toast";
 
 // function ComplaintManagement() {
 //   const { token } = useContext(AuthContext);
@@ -10,7 +11,12 @@
 //   const [categoryList, setCategoryList] = useState([]);
 //   const [complaints, setComplaints] = useState([]);
 //   const [error, setError] = useState(null);
+//   const [modalDescription, setModalDescription] = useState(null);
+//   const [updatingStatusId, setUpdatingStatusId] = useState(null);
+//   const [statusOptions, setStatusOptions] = useState([]);
+
 //   const [page, setPage] = useState(1);
+//   const [modalImage, setModalImage] = useState(null); // Modal image state
 //   const location = useLocation();
 
 //   const complaintsPerPage = 10;
@@ -62,22 +68,63 @@
 //   };
 
 //   useEffect(() => {
+//     const fetchStatusOptions = async () => {
+//       try {
+//         const res = await axios.get(
+//           "http://localhost:5001/auth/complaints/status-options",
+//           {
+//             headers: { Authorization: `Bearer ${token}` },
+//           }
+//         );
+//             console.log("Status options fetched:", res.data);
+//         setStatusOptions(res.data);
+//       } catch (err) {
+//         console.error("Failed to load status options:", err);
+//       }
+//     };
+
+//     fetchStatusOptions();
+//   }, [token]);
+
+//   const handleStatusChange = async (complaintId, newStatus) => {
+//     try {
+//       await axios.put(
+//         `http://localhost:5001/auth/complaints/${complaintId}/status`,
+//         { status: newStatus },
+//         { headers: { Authorization: `Bearer ${token}` } }
+//       );
+
+//       setComplaints((prevComplaints) =>
+//         prevComplaints.map((comp) =>
+//           comp.id === complaintId ? { ...comp, status: newStatus } : comp
+//         )
+//       );
+//       toast.success("Status updated successfully");
+//     } catch (err) {
+//       console.error("Failed to update complaint status:", err);
+//       alert("Error updating status, please try again.");
+//     }
+//   };
+
+//   useEffect(() => {
 //     if (token) {
 //       fetchUsers();
-//     }
-//   }, [token]);
-
-//   useEffect(() => {
-//     if (token) {
 //       fetchCategories();
-//     }
-//   }, [token]);
-
-//   useEffect(() => {
-//     if (token) {
 //       fetchComplaints();
+//       // fetchStatusOptions();
 //     }
-//   }, [token, location]); // refresh complaints on location change
+//   }, [token, location]);
+
+//   const handleImageClick = (imagePath) => {
+//     setModalImage(imagePath);
+//   };
+
+//   const closeModal = () => {
+//     setModalImage(null);
+//   };
+
+//   const userMap = Object.fromEntries(users.map(u => [u.id, u]));
+// const categoryMap = Object.fromEntries(categoryList.map(c => [c.id, c]));
 
 //   return (
 //     <div className="container-fluid mt-5 p-2 border shadow-sm">
@@ -118,16 +165,16 @@
 //                   <th>Category</th>
 //                   <th>Description</th>
 //                   <th>Image</th>
+//                   <th>Status</th>
 //                 </tr>
 //               </thead>
 
 //               <tbody>
 //                 {currentComplaint.map((complaint) => {
-//                   const user = users.find((u) => u.id === complaint.user_id);
-//                   const category = categoryList.find(
-//                     (cat) => cat.id === parseInt(complaint.categories)
-//                   );
+//                   const user = userMap[complaint.user_id];
+//                   const category = categoryMap[parseInt(complaint.categories)];
 
+          
 //                   return (
 //                     <tr key={complaint.id}>
 //                       <td>{complaint.user_id}</td>
@@ -135,24 +182,96 @@
 //                       <td>{complaint.title}</td>
 //                       <td>{complaint.mobileNumber}</td>
 //                       <td>{category ? category.category_name : "Unknown"}</td>
-//                       <td>{complaint.description}</td>
+//                       {/* <td>{complaint.description}</td> */}
+//                       {/* <td title={complaint.description}>
+//   {complaint.description.length > 100
+//     ? complaint.description.slice(0, 40) + "..."
+//     : complaint.description}
+// </td> */}
+
+//                       <td>
+//                         {complaint.description.length > 100 ? (
+//                           <>
+//                             {complaint.description.slice(0, 30)}...
+//                             <button
+//                               className="btn btn-sm btn-link"
+//                               onClick={() =>
+//                                 setModalDescription(complaint.description)
+//                               }
+//                             >
+//                               View More
+//                             </button>
+//                           </>
+//                         ) : (
+//                           complaint.description
+//                         )}
+//                       </td>
+
 //                       <td>
 //                         {complaint.image ? (
-//                           <a
-//                             href={`http://localhost:5001/auth/uploads/${complaint.image}`}
-//                             target="_blank"
-//                             rel="noopener noreferrer"
-//                           >
-//                             <img
-//                               src={`http://localhost:5001/auth/uploads/${complaint.image}`}
-//                               alt="Complaint"
-//                               style={{ width: "100px", height: "auto" }}
-//                             />
-//                           </a>
+//                           <img
+//                             src={`http://localhost:5001/auth/uploads/${complaint.image}`}
+//                             alt="Complaint"
+//                             style={{
+//                               width: "100px",
+//                               height: "auto",
+//                               cursor: "pointer",
+//                             }}
+//                             onClick={() =>
+//                               handleImageClick(
+//                                 `http://localhost:5001/auth/uploads/${complaint.image}`
+//                               )
+//                             }
+//                           />
 //                         ) : (
 //                           "N/A"
 //                         )}
 //                       </td>
+//                       {/* <td>
+                      
+//                         <select
+//   value={complaint.status.toLowerCase()}
+//   onChange={(e) =>
+//     handleStatusChange(complaint.id, e.target.value)
+//   }
+// >
+//   {statusOptions.map((opt) => (
+//     <option key={opt.id} value={opt.status.toLowerCase()}>
+//       {opt.status.charAt(0).toUpperCase() + opt.status.slice(1)}
+//     </option>
+//   ))}
+// </select>
+
+//                       </td> */}
+//                       <td>
+//   <span
+//     style={{
+//       display: "inline-block",
+//       marginRight: "10px",
+//       padding: "4px 8px",
+//       borderRadius: "12px",
+//       backgroundColor:
+//         complaint.status.toLowerCase() === "open" ? "#28a745" : "#dc3545",
+//       color: "white",
+//       // fontWeight: "bold",
+//       textTransform: "capitalize",
+//       fontSize: "0.85rem",
+//     }}
+//   >
+//     {complaint.status}
+//   </span>
+//   <select
+//     value={complaint.status.toLowerCase()}
+//     onChange={(e) => handleStatusChange(complaint.id, e.target.value)}
+//   >
+//     {statusOptions.map((opt) => (
+//       <option key={opt.id} value={opt.status.toLowerCase()}>
+//         {opt.status.charAt(0).toUpperCase() + opt.status.slice(1)}
+//       </option>
+//     ))}
+//   </select>
+// </td>
+
 //                     </tr>
 //                   );
 //                 })}
@@ -162,6 +281,7 @@
 //         )}
 //       </div>
 
+//       {/* Pagination */}
 //       <Pagination className="d-flex mt-3 justify-content-center">
 //         <Pagination.Prev
 //           onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
@@ -181,9 +301,68 @@
 //           disabled={page === totalPages}
 //         />
 //       </Pagination>
+
+//       {/* Modal for Image View */}
+//       {modalImage && (
+//         <div className="modal" style={modalStyles.overlay} onClick={closeModal}>
+//           <div className="modal-content" style={modalStyles.modalContent}>
+//             <img
+//               src={modalImage}
+//               alt="Expanded View"
+//               style={{ width: "100%", maxHeight: "80vh", objectFit: "contain" }}
+//             />
+//           </div>
+//         </div>
+//       )}
+
+//       {modalDescription && (
+//         <div
+//           className="modal"
+//           style={modalStyles.overlay}
+//           onClick={() => setModalDescription(null)}
+//         >
+//           <div className="modal-content" style={modalStyles.modalContent}>
+//             <h5>Full Description</h5>
+//             <p style={{ whiteSpace: "pre-wrap" }}>{modalDescription}</p>
+//             <button
+//               className="btn btn-secondary mt-2"
+//               onClick={() => setModalDescription(null)}
+//             >
+//               Close
+//             </button>
+//           </div>
+//         </div>
+//       )}
 //     </div>
 //   );
 // }
+
+// const modalStyles = {
+//   overlay: {
+//     position: "fixed",
+//     top: 0,
+//     left: 0,
+//     width: "100%",
+//     height: "100%",
+//     backgroundColor: "rgba(0, 0, 0, 0.7)",
+//     display: "flex",
+//     justifyContent: "center",
+//     alignItems: "center",
+//     zIndex: 1000,
+//     padding: "20px",
+//     overflowY: "auto",
+//   },
+//   modalContent: {
+//     position: "relative",
+//     backgroundColor: "white",
+//     padding: "20px",
+//     borderRadius: "10px",
+//     maxWidth: "600px",
+//     maxHeight: "80vh",
+//     overflowY: "auto",
+//     wordBreak: "break-word",
+//   },
+// };
 
 // export default ComplaintManagement;
 
@@ -194,25 +373,21 @@ import { Link, useLocation } from "react-router-dom";
 import axios from "axios";
 import Pagination from "react-bootstrap/Pagination";
 import { AuthContext } from "../context/AuthContext";
+import toast from "react-hot-toast";
 
 function ComplaintManagement() {
-  const { token } = useContext(AuthContext);
+  const { token, user } = useContext(AuthContext); // get user from context
   const [users, setUsers] = useState([]);
   const [categoryList, setCategoryList] = useState([]);
   const [complaints, setComplaints] = useState([]);
   const [error, setError] = useState(null);
+  const [modalDescription, setModalDescription] = useState(null);
+  const [statusOptions, setStatusOptions] = useState([]);
   const [page, setPage] = useState(1);
-  const [modalImage, setModalImage] = useState(null); // Modal image state
+  const [modalImage, setModalImage] = useState(null);
   const location = useLocation();
 
   const complaintsPerPage = 10;
-  const indexOfLastComplaint = page * complaintsPerPage;
-  const indexOfFirstComplaint = indexOfLastComplaint - complaintsPerPage;
-  const currentComplaint = complaints.slice(
-    indexOfFirstComplaint,
-    indexOfLastComplaint
-  );
-  const totalPages = Math.ceil(complaints.length / complaintsPerPage);
 
   const fetchUsers = async () => {
     try {
@@ -253,21 +428,99 @@ function ComplaintManagement() {
     }
   };
 
+  // useEffect(() => {
+  //   const fetchStatusOptions = async () => {
+  //     try {
+  //       const res = await axios.get(
+  //         "http://localhost:5001/auth/complaints/status-options",
+  //         {
+  //           headers: { Authorization: `Bearer ${token}` },
+  //         }
+  //       );
+  //       setStatusOptions(res.data);
+  //     } catch (err) {
+  //       console.error("Failed to load status options:", err);
+  //     }
+  //   };
+
+  //   fetchStatusOptions();
+  // }, [token]);
+
+  useEffect(() => {
+  const fetchStatusOptions = async () => {
+    try {
+      const res = await axios.get(
+        "http://localhost:5001/auth/complaints/status-options",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      console.log("Status options fetched:", res.data);  // Check this output
+      setStatusOptions(res.data);
+    } catch (err) {
+      console.error("Failed to load status options:", err);
+    }
+  };
+
+  fetchStatusOptions();
+}, [token]);
+
+
+  const handleStatusChange = async (complaintId, newStatus) => {
+    try {
+      await axios.put(
+        `http://localhost:5001/auth/complaints/${complaintId}/status`,
+        { status: newStatus },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setComplaints((prevComplaints) =>
+        prevComplaints.map((comp) =>
+          comp.id === complaintId ? { ...comp, status: newStatus } : comp
+        )
+      );
+      toast.success("Status updated successfully");
+    } catch (err) {
+      console.error("Failed to update complaint status:", err);
+      alert("Error updating status, please try again.");
+    }
+  };
+
   useEffect(() => {
     if (token) {
       fetchUsers();
       fetchCategories();
       fetchComplaints();
     }
-  }, [token, location]); // fetch data on location change
+  }, [token, location]);
 
   const handleImageClick = (imagePath) => {
-    setModalImage(imagePath); // Set the image path to display in the modal
+    setModalImage(imagePath);
   };
 
   const closeModal = () => {
-    setModalImage(null); // Close the modal by resetting the image path
+    setModalImage(null);
   };
+
+  // Maps for fast lookup
+  const userMap = Object.fromEntries(users.map((u) => [u.id, u]));
+  const categoryMap = Object.fromEntries(
+    categoryList.map((c) => [c.id, c])
+  );
+
+  // Filter complaints based on role:
+  const filteredComplaints =
+    user?.role === "Super Admin"
+      ? complaints
+      : complaints.filter((c) => c.user_id === user?.id);
+
+  const totalPages = Math.ceil(filteredComplaints.length / complaintsPerPage);
+  const indexOfLastComplaint = page * complaintsPerPage;
+  const indexOfFirstComplaint = indexOfLastComplaint - complaintsPerPage;
+  const currentComplaint = filteredComplaints.slice(
+    indexOfFirstComplaint,
+    indexOfLastComplaint
+  );
 
   return (
     <div className="container-fluid mt-5 p-2 border shadow-sm">
@@ -294,7 +547,7 @@ function ComplaintManagement() {
 
       <div className="row mt-4">
         <h3>Submitted Complaints</h3>
-        {complaints.length === 0 ? (
+        {filteredComplaints.length === 0 ? (
           <p>No complaints yet.</p>
         ) : (
           <div className="table-responsive">
@@ -308,37 +561,99 @@ function ComplaintManagement() {
                   <th>Category</th>
                   <th>Description</th>
                   <th>Image</th>
+                  <th>Status</th>
                 </tr>
               </thead>
 
               <tbody>
                 {currentComplaint.map((complaint) => {
-                  const user = users.find((u) => u.id === complaint.user_id);
-                  const category = categoryList.find(
-                    (cat) => cat.id === parseInt(complaint.categories)
-                  );
+                  const userInfo = userMap[complaint.user_id];
+                  const category = categoryMap[parseInt(complaint.categories)];
 
                   return (
                     <tr key={complaint.id}>
                       <td>{complaint.user_id}</td>
-                      <td>{user ? user.name : "Unknown"}</td>
+                      <td>{userInfo ? userInfo.name : "Unknown"}</td>
                       <td>{complaint.title}</td>
                       <td>{complaint.mobileNumber}</td>
                       <td>{category ? category.category_name : "Unknown"}</td>
-                      <td>{complaint.description}</td>
+
+                      <td>
+                        {complaint.description.length > 100 ? (
+                          <>
+                            {complaint.description.slice(0, 30)}...
+                            <button
+                              className="btn btn-sm btn-link"
+                              onClick={() =>
+                                setModalDescription(complaint.description)
+                              }
+                            >
+                              View More
+                            </button>
+                          </>
+                        ) : (
+                          complaint.description
+                        )}
+                      </td>
+
                       <td>
                         {complaint.image ? (
                           <img
                             src={`http://localhost:5001/auth/uploads/${complaint.image}`}
                             alt="Complaint"
-                            style={{ width: "100px", height: "auto", cursor: "pointer" }}
+                            style={{
+                              width: "100px",
+                              height: "auto",
+                              cursor: "pointer",
+                            }}
                             onClick={() =>
-                              handleImageClick(`http://localhost:5001/auth/uploads/${complaint.image}`)
+                              handleImageClick(
+                                `http://localhost:5001/auth/uploads/${complaint.image}`
+                              )
                             }
                           />
                         ) : (
                           "N/A"
                         )}
+                      </td>
+
+                      <td>
+                        <span
+                          style={{
+                            display: "inline-block",
+                            marginRight: "10px",
+                            padding: "4px 8px",
+                            borderRadius: "12px",
+                            backgroundColor:
+                              complaint.status.toLowerCase() === "open"
+                                ? "#28a745"
+                                : "#dc3545",
+                            color: "white",
+                            textTransform: "capitalize",
+                            fontSize: "0.85rem",
+                          }}
+                        >
+                          {complaint.status}
+                        </span>
+
+                        {user?.role === "Super Admin" ? (
+                          <select
+                            value={complaint.status.toLowerCase()}
+                            onChange={(e) =>
+                              handleStatusChange(complaint.id, e.target.value)
+                            }
+                          >
+                            {statusOptions.map((opt) => (
+                              <option
+                                key={opt.id}
+                                value={opt.status.toLowerCase()}
+                              >
+                                {opt.status.charAt(0).toUpperCase() +
+                                  opt.status.slice(1)}
+                              </option>
+                            ))}
+                          </select>
+                        ) : null}
                       </td>
                     </tr>
                   );
@@ -372,45 +687,43 @@ function ComplaintManagement() {
 
       {/* Modal for Image View */}
       {modalImage && (
-        <div className="modal" style={modalStyles.overlay} onClick={closeModal}>
+        <div
+          className="modal"
+          style={modalStyles.overlay}
+          onClick={closeModal}
+        >
           <div className="modal-content" style={modalStyles.modalContent}>
             <img
               src={modalImage}
               alt="Expanded View"
               style={{ width: "100%", maxHeight: "80vh", objectFit: "contain" }}
             />
-            {/* <button
-              className="btn btn-danger"
-              style={{ position: "absolute", top: "10px", right: "10px" }}
-              onClick={closeModal}
+          </div>
+        </div>
+      )}
+
+      {/* Modal for Description */}
+      {modalDescription && (
+        <div
+          className="modal"
+          style={modalStyles.overlay}
+          onClick={() => setModalDescription(null)}
+        >
+          <div className="modal-content" style={modalStyles.modalContent}>
+            <h5>Full Description</h5>
+            <p style={{ whiteSpace: "pre-wrap" }}>{modalDescription}</p>
+            <button
+              className="btn btn-secondary mt-2"
+              onClick={() => setModalDescription(null)}
             >
               Close
-            </button> */}
-             {/* <div className="d-flex justify-content-between mt-3">
-              <button
-                className="btn btn-danger"
-                style={{ position: "absolute", top: "10px", right: "10px" }}
-                onClick={closeModal}
-              >
-                Close
-              </button>
-    
-              <a
-                href={modalImage}
-                download
-                className="btn btn-primary"
-                style={{ marginTop: "20px" }}
-              >
-                Download Image
-              </a>
-          </div> */}
-        </div>
+            </button>
+          </div>
         </div>
       )}
     </div>
   );
 }
-
 
 const modalStyles = {
   overlay: {
@@ -424,13 +737,18 @@ const modalStyles = {
     justifyContent: "center",
     alignItems: "center",
     zIndex: 1000,
+    padding: "20px",
+    overflowY: "auto",
   },
   modalContent: {
     position: "relative",
     backgroundColor: "white",
     padding: "20px",
     borderRadius: "10px",
-    maxWidth: "60%",
+    maxWidth: "600px",
+    maxHeight: "80vh",
+    overflowY: "auto",
+    wordBreak: "break-word",
   },
 };
 
