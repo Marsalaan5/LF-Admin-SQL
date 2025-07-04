@@ -68,7 +68,7 @@ function Complaint() {
     const formData = new FormData();
     formData.append("title", title);
     formData.append("mobileNumber", mobileNumber);
-    formData.append("categories", categories); 
+    formData.append("categories", categories);
     formData.append("description", description);
     if (image) {
       formData.append("image", image);
@@ -111,11 +111,11 @@ function Complaint() {
   return (
     // <div className="container-fluid mt-5 p-2 border shadow-sm" style={{ maxWidth: '600px', margin: 'auto' }}>
     //   <div className="p-4 d-flex justify-content-between align-items-center">
-    
-    <div className="container-fluid mt-5 p-2">
-  <div className="p-4 d-flex justify-content-between align-items-center">
+
+    <div className="container-fluid border shadow-sm" style={{marginTop:"100px", width:"98%"}}>
+      <div className="d-flex justify-content-between align-items-center mt-5 mb-3">
         <div className="col-sm-6">
-          <h1 className="m-0 text-dark">Complaint Form</h1>
+          <h3>Complaint Form</h3>
           <div className="col-sm-6">
             <ol className="breadcrumb float-sm-right">
               <li className="breadcrumb-item">
@@ -125,122 +125,121 @@ function Complaint() {
             </ol>
           </div>
         </div>
-        </div>
-
-
-    <div
-      className="container-fluid p-2 border shadow-sm"
-      style={{ maxWidth: "600px" }}
-      >
-      <div className="p-4 ">
-        <h1 className="m-0 text-dark text-center">Complaint Form</h1>
       </div>
 
-      {error && <div className="alert alert-danger">{error}</div>}
-      {successMessage && (
-        <div className="alert alert-success">{successMessage}</div>
-      )}
-
-      <form onSubmit={handleSubmit} encType="multipart/form-data">
-        <div className="mb-3">
-          <label htmlFor="title" className="form-label">
-            Title
-          </label>
-          <input
-            type="text"
-            id="title"
-            className="form-control"
-            placeholder="Enter Title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            />
+      <div
+        className="container-fluid p-2 border shadow-sm"
+        style={{ maxWidth: "600px" }}
+      >
+        <div className="p-4 ">
+          <h1 className="m-0 text-dark text-center">Complaint Form</h1>
         </div>
 
-        <div className="mb-3">
-          <label htmlFor="mobileNumber" className="form-label">
-            Mobile Number
-          </label>
-          <input
-            type="tel"
-            className="form-control"
-            id="mobileNumber"
-            value={mobileNumber}
-            onChange={(e) => setMobileNumber(e.target.value)}
-            pattern="[0-9]{10}"
-            title="Enter a 10-digit mobile number"
-          />
-        </div>
-
-        <div className="mb-3">
-          <label htmlFor="categories" className="form-label">
-            Category
-          </label>
-          <select
-            id="categories"
-            className="form-control"
-            value={categories}
-            onChange={(e) => setCategories(e.target.value)}
-            >
-            <option value="">Select a Category</option>
-            {categoryList.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.category_name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="mb-3">
-          <label htmlFor="description" className="form-label">
-            Description
-          </label>
-          <textarea
-            id="description"
-            className="form-control"
-            placeholder="Describe your complaint"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={4}
-            />
-        </div>
-
-        <div className="mb-3">
-          <label htmlFor="image" className="form-label">
-            Upload Image
-          </label>
-          <input
-            type="file"
-            id="image"
-            className="form-control"
-            onChange={handleFileChange}
-            accept="image/*"
-            />
-        </div>
-
-        {preview && (
-          <div className="mb-3">
-            <img
-              src={preview}
-              alt="Preview"
-              style={{
-                maxWidth: "200px",
-                maxHeight: "200px",
-                objectFit: "contain",
-              }}
-              />
-          </div>
+        {error && <div className="alert alert-danger">{error}</div>}
+        {successMessage && (
+          <div className="alert alert-success">{successMessage}</div>
         )}
 
-        <button
-          type="submit"
-          className="btn btn-primary w-100"
-          disabled={loading}
-          >
-          {loading ? "Submitting..." : "Submit Complaint"}
-        </button>
-      </form>
-    </div>
+        <form onSubmit={handleSubmit} encType="multipart/form-data">
+          <div className="mb-3">
+            <label htmlFor="title" className="form-label">
+              Title
+            </label>
+            <input
+              type="text"
+              id="title"
+              className="form-control"
+              placeholder="Enter Title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
           </div>
+
+          <div className="mb-3">
+            <label htmlFor="mobileNumber" className="form-label">
+              Mobile Number
+            </label>
+            <input
+              type="tel"
+              className="form-control"
+              id="mobileNumber"
+              value={mobileNumber}
+              onChange={(e) => setMobileNumber(e.target.value)}
+              pattern="[0-9]{10}"
+              title="Enter a 10-digit mobile number"
+            />
+          </div>
+
+          <div className="mb-3">
+            <label htmlFor="categories" className="form-label">
+              Category
+            </label>
+            <select
+              id="categories"
+              className="form-control"
+              value={categories}
+              onChange={(e) => setCategories(e.target.value)}
+            >
+              <option value="">Select a Category</option>
+              {categoryList.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.category_name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="mb-3">
+            <label htmlFor="description" className="form-label">
+              Description
+            </label>
+            <textarea
+              id="description"
+              className="form-control"
+              placeholder="Describe your complaint"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={4}
+            />
+          </div>
+
+          <div className="mb-3">
+            <label htmlFor="image" className="form-label">
+              Upload Image
+            </label>
+            <input
+              type="file"
+              id="image"
+              className="form-control"
+              onChange={handleFileChange}
+              accept="image/*"
+            />
+          </div>
+
+          {preview && (
+            <div className="mb-3">
+              <img
+                src={preview}
+                alt="Preview"
+                style={{
+                  maxWidth: "200px",
+                  maxHeight: "200px",
+                  objectFit: "contain",
+                }}
+              />
+            </div>
+          )}
+
+          <button
+            type="submit"
+            className="btn btn-primary w-100"
+            disabled={loading}
+          >
+            {loading ? "Submitting..." : "Submit Complaint"}
+          </button>
+        </form>
+      </div>
+    </div>
   );
 }
 

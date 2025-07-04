@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import toast, { Toaster } from "react-hot-toast"; 
+import toast, { Toaster } from "react-hot-toast";
 
 function Profile() {
   const [user, setUser] = useState(null);
@@ -13,7 +13,6 @@ function Profile() {
   });
 
   const navigate = useNavigate();
-
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -56,8 +55,8 @@ function Profile() {
       toast("No changes detected.", {
         icon: "⚠️",
         style: { backgroundColor: "orange", color: "white" },
-      }); 
-      return; 
+      });
+      return;
     }
 
     const dataToUpdate = {
@@ -67,7 +66,6 @@ function Profile() {
     };
 
     try {
-    
       await axios.put("http://localhost:5001/auth/profile", dataToUpdate, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -87,14 +85,13 @@ function Profile() {
         password: "",
       });
 
-     
       if (formData.password.trim()) {
-        localStorage.removeItem("token"); 
+        localStorage.removeItem("token");
         toast.success(
           "Password updated successfully. You have been logged out."
-        ); 
-        navigate("/login"); 
-        return; 
+        );
+        navigate("/login");
+        return;
       }
 
       setIsEditing(false);
@@ -102,16 +99,15 @@ function Profile() {
       navigate("/profile");
     } catch (error) {
       console.error("Error updating profile:", error);
-      toast.error("Failed to update profile."); 
+      toast.error("Failed to update profile.");
     }
   };
 
   if (!user) return <div className="text-center mt-5">Loading...</div>;
 
   return (
-
-   <div className="container mt-5 p-2">
-  <div className="p-4 d-flex justify-content-between align-items-center">
+    <div className="container mt-5 p-2">
+      <div className="p-4 d-flex justify-content-between align-items-center">
         <div className="col-sm-6">
           <h1 className="m-0 text-dark">Profile</h1>
           <div className="col-sm-6">
@@ -123,9 +119,7 @@ function Profile() {
             </ol>
           </div>
         </div>
-        </div>
-
-
+      </div>
       <div className="card shadow-sm mx-auto" style={{ maxWidth: "600px" }}>
         <div className="card-body">
           <h3 className="card-title text-center mb-4">
@@ -133,7 +127,6 @@ function Profile() {
           </h3>
 
           <form onSubmit={handleSubmit}>
-         
             <div className="mb-3">
               <label className="form-label">Full Name</label>
               <input
@@ -147,7 +140,6 @@ function Profile() {
               />
             </div>
 
-       
             <div className="mb-3">
               <label className="form-label">Email Address</label>
               <input
@@ -175,7 +167,6 @@ function Profile() {
               </div>
             )}
 
-     
             <div className="text-center">
               {isEditing ? (
                 <>
@@ -203,9 +194,7 @@ function Profile() {
           </form>
         </div>
       </div>
-     
       <Toaster position="top-center" />{" "}
-
     </div>
   );
 }

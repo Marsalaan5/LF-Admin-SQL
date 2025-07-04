@@ -126,10 +126,10 @@ function Category() {
   };
 
   return (
-    <div className="container-fluid mt-5 p-2 border shadow-sm">
-      <div className="p-4 d-flex justify-content-between align-items-center">
+    <div className="container-fluid border shadow-sm" style={{marginTop:"100px", width:"98%"}}>
+      <div className="d-flex justify-content-between align-items-center mt-5 mb-3">
         <div className="col-sm-6">
-          <h1 className="m-0 text-dark">Category</h1>
+          <h3>Category</h3>
           <div className="col-sm-6">
             <ol className="breadcrumb float-sm-right">
               <li className="breadcrumb-item">

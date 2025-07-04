@@ -1,18 +1,17 @@
-
-import { useState } from 'react';
-import { useParams } from 'react-router-dom';
-import axios from 'axios';
+import { useState } from "react";
+import { useParams } from "react-router-dom";
+import axios from "axios";
 
 function ResetPassword() {
-  const [password, setPassword] = useState('');
-  const [message, setMessage] = useState('');
+  const [password, setPassword] = useState("");
+  const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const { token } = useParams();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setMessage('');
+    setMessage("");
 
     try {
       const res = await axios.post(
@@ -21,7 +20,7 @@ function ResetPassword() {
       );
       setMessage(res.data.message);
     } catch (err) {
-      setMessage(err.response?.data?.message || 'Error occurred');
+      setMessage(err.response?.data?.message || "Error occurred");
     } finally {
       setLoading(false);
     }
@@ -31,7 +30,6 @@ function ResetPassword() {
     <div className="container mt-5">
       <div className="row justify-content-center">
         <div className="col-md-6">
-
           <div className="mb-4">
             <h1 className="h3 text-dark">Reset Password</h1>
             <nav aria-label="breadcrumb">
@@ -73,16 +71,16 @@ function ResetPassword() {
                   className="btn btn-primary w-100"
                   disabled={loading}
                 >
-                  {loading ? 'Resetting...' : 'Reset Password'}
+                  {loading ? "Resetting..." : "Reset Password"}
                 </button>
               </form>
 
               {message && (
                 <div
                   className={`alert mt-3 ${
-                    message.toLowerCase().includes('error')
-                      ? 'alert-danger'
-                      : 'alert-success'
+                    message.toLowerCase().includes("error")
+                      ? "alert-danger"
+                      : "alert-success"
                   }`}
                   role="alert"
                 >

@@ -1,14 +1,13 @@
-
-
 import React, { createContext, useState, useEffect } from "react";
 
 export const AuthContext = createContext();
 
 const AuthProvider = ({ children }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [token, setToken] = useState(null);
   const [user, setUser] = useState(null);
-  const [permissions, setPermissions] = useState([]); 
+  const [permissions, setPermissions] = useState([]);
 
   useEffect(() => {
     const storedToken = localStorage.getItem("token");
@@ -18,14 +17,13 @@ const AuthProvider = ({ children }) => {
     if (storedToken && storedUser && storedPermissions) {
       setIsLoggedIn(true);
       setToken(storedToken);
-      
+
       try {
-       
         const parsedPermissions = JSON.parse(storedPermissions);
         setPermissions(parsedPermissions || []);
       } catch (error) {
         console.error("Failed to parse permissions from localStorage", error);
-        setPermissions([]);  // Default to an empty array on error
+        setPermissions([]); // Default to an empty array on error
       }
 
       try {
@@ -35,6 +33,7 @@ const AuthProvider = ({ children }) => {
         localStorage.removeItem("user");
       }
     }
+    setIsLoading(false);
   }, []);
 
   const login = (newToken, newUser, newPermissions) => {
@@ -54,12 +53,14 @@ const AuthProvider = ({ children }) => {
     localStorage.removeItem("permissions");
     setUser(null);
     setToken(null);
-    setPermissions([]); 
+    setPermissions([]);
     setIsLoggedIn(false);
   };
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, login, logout, token, user, permissions }}>
+    <AuthContext.Provider
+      value={{ isLoggedIn, isLoading, login, logout, token, user, permissions }}
+    >
       {children}
     </AuthContext.Provider>
   );

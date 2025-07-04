@@ -5,16 +5,13 @@
 // export const createUser = async (req, res) => {
 //   const { name, email, password, role, status } = req.body;
 
-
 //   if (!name || !email || !password || !role || !status) {
 //     return res.status(400).json({ message: "All fields are required." });
 //   }
 
-
 //   if (!roleHierarchy[role]) {
 //     return res.status(400).json({ message: "Invalid role specified." });
 //   }
-
 
 //   if (roleHierarchy[role] >= roleHierarchy[req.user.role]) {
 //     return res.status(403).json({
@@ -32,7 +29,6 @@
 //       return res.status(409).json({ message: "Email already in use." });
 //     }
 
-    
 //     const roleId = roleResult[0].id;
 
 //     const hashedPassword = await bcrypt.hash(password, 10);
@@ -49,8 +45,6 @@
 //     res.status(500).json({ message: "Server error" });
 //   }
 // };
-
-
 
 import { roleHierarchy } from "../utils/roleHierarchy.js";
 import { pool } from "../server.js";

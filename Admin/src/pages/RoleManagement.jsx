@@ -178,10 +178,10 @@ function RolesManagement() {
     //     </button>
     //   </div>
 
-     <div className="container-fluid mt-5 p-2 border shadow-sm">
-      <div className=" p-4 d-flex justify-content-between align-items-center">
+     <div className="container-fluid border shadow-sm" style={{marginTop:"100px", width:"98%"}}>
+      <div className=" d-flex justify-content-between align-items-center mt-5 mb-3">
          <div className="col-sm-6">
-                <h1 className="m-0 text-dark">Role Management</h1>
+                <h3>Role Management</h3>
                 <div className="col-sm-6">
                   <ol className="breadcrumb float-sm-right">
                     <li className="breadcrumb-item">
@@ -201,22 +201,22 @@ function RolesManagement() {
       
       </div>
 
-      <div className="mt-5"></div>
+      <div className="mt-5">
 
-      <table className="table table-striped table-bordered table-hover">
-        <thead className="table-dark">
+      <table className="table table-sm table-hover mb-0 align-middle text-sm" style={{ fontSize: "13px" }}>
+        <thead className="table-dark  text-uppercase">
           <tr>
-            <th>ID</th>
+            <th style={{ width: "60px" }}>ID</th>
             <th>Role</th>
             <th>Permissions</th>
-            <th className="text-center">Actions</th>
+            <th className="text-center" style={{ width: "100px" }}>Actions</th>
           </tr>
         </thead>
         <tbody>
           {roles.map((role) => (
             <tr key={role.id}>
-              <td>{role.id}</td>
-              <td className="fw-semibold">{role.name}</td>
+              <td className="text-muted">{role.id}</td>
+              <td className="fw-semibold text-capitalize">{role.name}</td>
               <td>{formatPermissions(role.permissions)}</td>
               {/* <td className="d-flex text-center">
                 <button
@@ -253,6 +253,7 @@ function RolesManagement() {
           ))}
         </tbody>
       </table>
+      </div>
 
       {/* Modal for adding/editing a role */}
       {showModal && (
@@ -281,41 +282,41 @@ function RolesManagement() {
                       onChange={(e) => setName(e.target.value)}
                     />
                   </div>
-                  <h5>Permissions</h5>
-                  {Object.keys(modules).map((component) => (
-                    <div key={component} className="mb-2">
-                      <strong>
-                        {component.replace("_", " ").toUpperCase()}
-                      </strong>
-                      <div className="form-check ms-3">
-                        {modules[component].map((action) => (
-                          <div
-                            key={action}
-                            className="form-check form-check-inline"
-                          >
-                            <input
-                              className="form-check-input"
-                              type="checkbox"
-                              checked={
-                                permissions[component]?.[action] || false
-                              }
-                              onChange={() =>
-                                handlePermissionChange(component, action)
-                              }
-                              id={`${component}-${action}`}
-                            />
-                            <label
-                              className="form-check-label"
-                              htmlFor={`${component}-${action}`}
-                            >
-                              {action}
-                            </label>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                  <h5 className="mb-3">Permissions</h5>
+<div className="row">
+  {Object.keys(modules).map((component) => (
+    <div className="col-md-6 mb-3" key={component}>
+      <div className="card shadow-sm h-100">
+        <div className="card-header py-2">
+          <strong className="text-uppercase small">
+            {component.replace("_", " ")}
+          </strong>
+        </div>
+        <div className="card-body d-flex flex-wrap gap-2">
+          {modules[component].map((action) => (
+            <div key={action} className="form-check form-check-inline">
+              <input
+                className="form-check-input"
+                type="checkbox"
+                id={`${component}-${action}`}
+                checked={permissions[component]?.[action] || false}
+                onChange={() => handlePermissionChange(component, action)}
+              />
+              <label
+                className="form-check-label small"
+                htmlFor={`${component}-${action}`}
+              >
+                {action}
+              </label>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  ))}
+</div>
+</div>
+
 
                 <div className="modal-footer">
                   <button type="submit" className="btn btn-primary">

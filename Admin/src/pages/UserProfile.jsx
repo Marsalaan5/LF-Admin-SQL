@@ -50,9 +50,6 @@
 
 // export default UserProfile;
 
-
-
-
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState, useContext } from "react";
 import axios from "axios";
@@ -61,7 +58,7 @@ import userr from "../assets/userr.jpg";
 
 function UserProfile() {
   const { id } = useParams();
-  const { token,users } = useContext(AuthContext);
+  const { token, users } = useContext(AuthContext);
   const [user, setUser] = useState(null);
   const [error, setError] = useState("");
   const navigate = useNavigate();
@@ -87,8 +84,7 @@ function UserProfile() {
   if (!user) return <div className="text-center mt-5">Loading...</div>;
 
   return (
-
-     <div className="container mt-5 p-2">
+    <div className="container mt-5 p-2">
       {/* Header */}
       {/* <div className="row mb-4 align-items-center">
         <div className="d-flex col-md-6">
@@ -103,7 +99,7 @@ function UserProfile() {
           </ol>
         </div>
       </div> */}
-         {/* <div className="container-fluid mt-5 p-2 border shadow-sm"> */}
+      {/* <div className="container-fluid mt-5 p-2 border shadow-sm"> */}
       <div className="p-4 d-flex justify-content-between align-items-center">
         <div className="col-sm-6">
           <h1 className="m-0 text-dark">User Profile</h1>
@@ -116,7 +112,7 @@ function UserProfile() {
             </ol>
           </div>
         </div>
-        </div>
+      </div>
 
       {/* Profile Card */}
       <div className="card shadow-sm p-4">
@@ -160,9 +156,7 @@ function UserProfile() {
           </div>
           <div className="col-md-6">
             <strong>Last Login:</strong>{" "}
-            {user.lastLogin
-              ? new Date(user.lastLogin).toLocaleString()
-              : "N/A"}
+            {user.lastLogin ? new Date(user.lastLogin).toLocaleString() : "N/A"}
           </div>
         </div>
 
@@ -183,4 +177,4 @@ function UserProfile() {
   );
 }
 
-export default UserProfile
+export default UserProfile;

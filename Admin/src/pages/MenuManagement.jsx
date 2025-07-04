@@ -2,8 +2,7 @@ import React, { useState, useEffect, useContext } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
-import toast, { Toaster } from "react-hot-toast"; 
-
+import toast, { Toaster } from "react-hot-toast";
 
 function MenuManagement({ userRole }) {
   const { token } = useContext(AuthContext);
@@ -173,34 +172,34 @@ function MenuManagement({ userRole }) {
   if (!userRole) return <p>Loading or no user role detected.</p>;
 
   return (
-    <div className="container-fluid mt-5 p-2 border shadow-sm">
-      <div className="p-4 d-flex justify-content-between align-items-center">
-      <div className="col-sm-6">
-        <h1 className="m-0 text-dark">Manage Menu </h1>
+    <div className="container-fluid  border shadow-sm" style={{marginTop:"100px", width:"98%"}}>
+      <div className="d-flex justify-content-between align-items-center mt-5 mb-3">
         <div className="col-sm-6">
-          <ol className="breadcrumb float-sm-right">
-            <li className="breadcrumb-item">
-              <Link to="/">Home</Link>
-            </li>
-            <li className="breadcrumb-item active">Menu Management</li>
-          </ol>
+          <h3>Manage Menu </h3>
+          <div className="col-sm-6">
+            <ol className="breadcrumb float-sm-right">
+              <li className="breadcrumb-item">
+                <Link to="/">Home</Link>
+              </li>
+              <li className="breadcrumb-item active">Menu Management</li>
+            </ol>
+          </div>
+        </div>
+
+        <div className="mb-3">
+          <button
+            className="btn btn-success"
+            data-bs-toggle="modal"
+            data-bs-target="#menuModal"
+            onClick={() => {
+              setEditingItem(null);
+              resetForm();
+            }}
+          >
+            <i className="fas fa-plus me-2"></i> Add New Menu Item
+          </button>
         </div>
       </div>
-
-      <div className="mb-3">
-        <button
-          className="btn btn-success"
-          data-bs-toggle="modal"
-          data-bs-target="#menuModal"
-          onClick={() => {
-            setEditingItem(null);
-            resetForm();
-          }}
-        >
-         <i className="fas fa-plus me-2"></i>   Add New Menu Item
-        </button>
-      </div>
-</div>
       {error && <div className="alert alert-danger">{error}</div>}
 
       {/* <form onSubmit={handleSubmit} className="bg-light p-3 rounded mb-4">

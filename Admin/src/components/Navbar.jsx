@@ -79,7 +79,6 @@ function Navbar({ toggleSidebar, isSidebarOpen }) {
       <div className="container-fluid">
         {/* DESKTOP NAVBAR (3-column layout) */}
         <div className="d-none d-md-flex justify-content-between align-items-center w-100">
-         
           <div className="d-flex align-items-center gap-2">
             <Link to="/">
               <img
@@ -162,7 +161,6 @@ function Navbar({ toggleSidebar, isSidebarOpen }) {
               </div>
             </div>
           </div>
-
 
           <div className="d-flex align-items-center gap-3">
             <button className="btn btn-outline-secondary">
@@ -277,7 +275,6 @@ function Navbar({ toggleSidebar, isSidebarOpen }) {
 
         {/* MOBILE NAVBAR */}
         <div className="d-flex d-md-none justify-content-between w-100 align-items-center">
-       
           <div className="d-flex align-items-center gap-3">
             <button
               className="btn btn-outline-light"
@@ -298,7 +295,6 @@ function Navbar({ toggleSidebar, isSidebarOpen }) {
             />
             <h5 className="mb-0 fw-semibold text-dark">Admin</h5>
           </div>
-
 
           <button
             className="btn d-md-none"

@@ -1,6 +1,3 @@
-
-
-
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
@@ -15,34 +12,35 @@ function Sidebar({ isOpen, userRole }) {
     fetchMenuItems();
   }, [userRole]);
 
- const fetchMenuItems = async () => {
-  try {
-    setIsLoading(true);
-    const token = localStorage.getItem("token"); // or get token from context if you use it
+  const fetchMenuItems = async () => {
+    try {
+      setIsLoading(true);
+      const token = localStorage.getItem("token");
 
-    const response = await axios.get(
-      `http://localhost:5001/auth/menu?role=${userRole}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
-    setMenuItems(response.data);
-    setIsLoading(false);
-  } catch (error) {
-    setError("Failed to load menu items");
-    setIsLoading(false);
-  }
-};
-
+      const response = await axios.get(
+        `http://localhost:5001/auth/menu?role=${userRole}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      setMenuItems(response.data);
+      setIsLoading(false);
+    } catch (error) {
+      setError("Failed to load menu items", error);
+      setIsLoading(false);
+    }
+  };
 
   const renderMenu = (items) =>
     items.map((item) => (
       <li key={item.id} className="nav-item mb-2">
         <Link
           to={item.status === "active" ? item.path : "#"}
-          className={`nav-link d-flex align-items-center ${item.status === "active" ? "text-white" : "text-secondary"}`}
+          className={`nav-link d-flex align-items-center ${
+            item.status === "active" ? "text-white" : "text-secondary"
+          }`}
         >
           <i className={`${item.icon} me-2`}></i>
           <span>{item.title}</span>
@@ -66,7 +64,13 @@ function Sidebar({ isOpen, userRole }) {
       }}
     >
       <div className="p-2 mt-2">
-        {isLoading ? <p>Loading menu...</p> : error ? <p>{error}</p> : <ul className="nav flex-column">{renderMenu(menuItems)}</ul>}
+        {isLoading ? (
+          <p>Loading menu...</p>
+        ) : error ? (
+          <p>{error}</p>
+        ) : (
+          <ul className="nav flex-column">{renderMenu(menuItems)}</ul>
+        )}
       </div>
     </div>
   );

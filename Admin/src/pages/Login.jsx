@@ -9,7 +9,7 @@ function Login() {
   const [errorMessage, setErrorMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { login,permissions } = useContext(AuthContext);
+  const { login, permissions } = useContext(AuthContext);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -30,22 +30,25 @@ function Login() {
         password,
       });
 
-      
-//  const { token, result, permissions } = response.data;
+      //  const { token, result, permissions } = response.data;
 
-    // // Store token, user, and permissions in localStorage
-    // localStorage.setItem("token", token);
-    // localStorage.setItem("user", JSON.stringify(result));
-    // localStorage.setItem("permissions", JSON.stringify(permissions)); // Store permissions in localStorage
+      // // Store token, user, and permissions in localStorage
+      // localStorage.setItem("token", token);
+      // localStorage.setItem("user", JSON.stringify(result));
+      // localStorage.setItem("permissions", JSON.stringify(permissions)); // Store permissions in localStorage
 
-    // // Update context state with token, user, and permissions
-    // login(token, result, permissions); // Pass permissions from API response
+      // // Update context state with token, user, and permissions
+      // login(token, result, permissions); // Pass permissions from API response
 
       localStorage.setItem("token", response.data.token);
       localStorage.setItem("user", JSON.stringify(response.data.result));
       localStorage.setItem("permissions", JSON.stringify(permissions));
 
-      login(response.data.token, response.data.result, response.data.permissions);
+      login(
+        response.data.token,
+        response.data.result,
+        response.data.permissions
+      );
 
       navigate("/");
     } catch (error) {

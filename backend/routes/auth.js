@@ -1,7 +1,7 @@
 import multer from "multer";
 import express from "express";
 import bcrypt from "bcryptjs";
-import crypto from 'crypto'
+import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import { pool, io } from "../server.js";
 import { authenticateToken, isAdmin } from "../middleware/authMiddleware.js";
@@ -15,8 +15,7 @@ import { Parser } from "json2csv";
 import XLSX from "xlsx";
 import { fileURLToPath } from "url";
 import Joi from "joi";
-import nodemailer from 'nodemailer';
-
+import nodemailer from "nodemailer";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -24,8 +23,6 @@ const __dirname = path.dirname(__filename);
 const router = express.Router();
 
 const uploadDir = path.join(__dirname, "uploads");
-
-
 
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir);
@@ -109,19 +106,21 @@ const logAudit = async (
   }
 };
 
-
 const registerSchema = Joi.object({
   name: Joi.string().min(3).max(50).required(),
   email: Joi.string().email().required(),
   password: Joi.string()
     .min(8)
     .max(128)
-    .pattern(new RegExp('^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).+')) 
+    .pattern(new RegExp("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).+"))
     .required(),
-  role: Joi.string().valid('user', 'admin','super admin','viewer').insensitive()
-    .required().default('user'),
-  status: Joi.string().valid('active', 'inactive').default('active'),
-}).prefs({ convert: true });;
+  role: Joi.string()
+    .valid("user", "admin", "super admin", "viewer")
+    .insensitive()
+    .required()
+    .default("user"),
+  status: Joi.string().valid("active", "inactive").default("active"),
+}).prefs({ convert: true });
 
 // const loginSchema = Joi.object({
 //   email: Joi.string().email().required(),
@@ -133,7 +132,6 @@ router.use("/uploads", express.static(uploadDir));
 router.get("/modules", (req, res) => {
   res.json(moduleConfig);
 });
-
 
 // //register
 // router.post("/register",authenticateToken,createUser, upload.single("image"), async (req, res) => {
@@ -253,7 +251,6 @@ router.post(
         [name, email, hashedPassword, roleId, role, image, status]
       );
 
-
       io.emit("new-signup", { name, email });
 
       // Audit log
@@ -280,12 +277,10 @@ router.post(
   }
 );
 
-
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
   try {
-
     //  const { error, value } = loginSchema.validate(req.body);
     // if (error) {
     //   return res.status(400).json({ message: 'Invalid email or password' });
@@ -302,10 +297,9 @@ router.post("/login", async (req, res) => {
 
     const user = userRows[0];
 
-if (user.status !== "active") {
-  return res.status(403).json({ message: "Your account is inactive." });
-}
-
+    if (user.status !== "active") {
+      return res.status(403).json({ message: "Your account is inactive." });
+    }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
@@ -367,29 +361,29 @@ if (user.status !== "active") {
   }
 });
 
-
-
 //  password reset link
-router.post('/forgot-password', async (req, res) => {
+router.post("/forgot-password", async (req, res) => {
   try {
     const { email } = req.body;
 
-    const [users] = await pool.execute('SELECT * FROM login WHERE email = ?', [email]);
-    if (users.length === 0) return res.status(400).json({ message: 'No user found with that email' });
-
-    const token = crypto.randomBytes(32).toString('hex');
-    const expiry = new Date(Date.now() + 3600000); 
-
-    await pool.execute('UPDATE login SET reset_token = ?, reset_token_expiry = ? WHERE email = ?', [
-      token,
-      expiry,
+    const [users] = await pool.execute("SELECT * FROM login WHERE email = ?", [
       email,
     ]);
+    if (users.length === 0)
+      return res.status(400).json({ message: "No user found with that email" });
+
+    const token = crypto.randomBytes(32).toString("hex");
+    const expiry = new Date(Date.now() + 3600000);
+
+    await pool.execute(
+      "UPDATE login SET reset_token = ?, reset_token_expiry = ? WHERE email = ?",
+      [token, expiry, email]
+    );
 
     const resetLink = `http://localhost:5173/reset-password/${token}`;
 
     const transporter = nodemailer.createTransport({
-      service: 'Gmail',
+      service: "Gmail",
       auth: {
         user: process.env.EMAIL_ID,
         pass: process.env.EMAIL_PASSWORD,
@@ -398,37 +392,41 @@ router.post('/forgot-password', async (req, res) => {
 
     await transporter.sendMail({
       to: email,
-      subject: 'Password Reset Request',
+      subject: "Password Reset Request",
       html: `<p>Click the link below to reset your password:</p><a href="${resetLink}">${resetLink}</a>`,
     });
 
-    res.json({ message: 'Password reset link sent to your email' });
+    res.json({ message: "Password reset link sent to your email" });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Server error" });
   }
 });
 
 //  password with token
-router.post('/reset-password/:token', async (req, res) => {
+router.post("/reset-password/:token", async (req, res) => {
   try {
     const { token } = req.params;
     const { password } = req.body;
 
-    const [users] = await pool.execute('SELECT * FROM login WHERE reset_token = ? AND reset_token_expiry > NOW()', [token]);
-    if (users.length === 0) return res.status(400).json({ message: 'Invalid or expired token' });
+    const [users] = await pool.execute(
+      "SELECT * FROM login WHERE reset_token = ? AND reset_token_expiry > NOW()",
+      [token]
+    );
+    if (users.length === 0)
+      return res.status(400).json({ message: "Invalid or expired token" });
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    await pool.execute('UPDATE login SET password = ?, reset_token = NULL, reset_token_expiry = NULL WHERE id = ?', [
-      hashedPassword,
-      users[0].id,
-    ]);
+    await pool.execute(
+      "UPDATE login SET password = ?, reset_token = NULL, reset_token_expiry = NULL WHERE id = ?",
+      [hashedPassword, users[0].id]
+    );
 
-    res.json({ message: 'Password has been reset successfully' });
+    res.json({ message: "Password has been reset successfully" });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Server error" });
   }
 });
 
@@ -691,12 +689,10 @@ router.delete(
   }
 );
 
-
 // GET /auth/status-options
 router.get("/status-options", authenticateToken, (req, res) => {
   res.json(["active", "inactive"]);
 });
-
 
 // Search users by name or role
 router.get("/search", authenticateToken, async (req, res) => {
@@ -711,7 +707,7 @@ router.get("/search", authenticateToken, async (req, res) => {
       `SELECT id, name, email, role, role_id, image, status
        FROM login
        WHERE name LIKE ? OR role LIKE ?`,
-  
+
       [`%${searchTerm}%`, `%${searchTerm}%`]
     );
 
@@ -1229,7 +1225,6 @@ router.delete(
   }
 );
 
-
 //compalints
 
 router.get(
@@ -1261,7 +1256,6 @@ router.get(
   }
 );
 
-
 router.get(
   "/complaints/status-options",
   authenticateToken,
@@ -1289,7 +1283,7 @@ router.get(
 
       const values = matches[1]
         .split(",")
-        .map(val => val.trim().replace(/^'(.*)'$/, "$1")) 
+        .map((val) => val.trim().replace(/^'(.*)'$/, "$1"))
         .map((status, idx) => ({ id: idx + 1, status }));
 
       res.status(200).json(values);
@@ -1332,9 +1326,6 @@ router.get(
   }
 );
 
-
-
-
 router.post(
   "/complaints",
   upload.single("image"),
@@ -1350,7 +1341,15 @@ router.post(
         `INSERT INTO complaints 
           (user_id, title, categories, description, image, mobileNumber,status)
          VALUES (?, ?, ?, ?, ?, ?,?)`,
-        [userId, title, categories, description, image, mobileNumber || null ,'open']
+        [
+          userId,
+          title,
+          categories,
+          description,
+          image,
+          mobileNumber || null,
+          "pending",
+        ]
       );
 
       res.status(200).json({
@@ -1361,7 +1360,7 @@ router.post(
         description,
         image,
         mobileNumber,
-        status:'open',
+        status: "open",
         createdAt: new Date(),
       });
     } catch (err) {
@@ -1422,10 +1421,5 @@ router.put(
     }
   }
 );
-
-
-
-
-
 
 export default router;
