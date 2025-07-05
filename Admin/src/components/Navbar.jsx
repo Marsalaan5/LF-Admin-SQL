@@ -16,9 +16,27 @@ function Navbar({ toggleSidebar, isSidebarOpen }) {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState([]);
+//  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+ const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const { isLoggedIn, logout, user, token } = useContext(AuthContext);
+  console.log("isLoggedIn:", isLoggedIn);
+console.log("User:", user);
+
+  console.log("USER IN NAVBAR:", user);
+
+
+
+
+
+
+
   const navigate = useNavigate();
+
+   const toggleDropdown = () => setDropdownOpen((prev) => !prev);
+  const closeDropdown = () => setDropdownOpen(false);
+
+
 
   const handleSignIn = () => navigate("/login");
   const handleLogout = () => logout();
@@ -76,6 +94,7 @@ function Navbar({ toggleSidebar, isSidebarOpen }) {
         zIndex: 1040,
       }}
     >
+      
       <div className="container-fluid">
         {/* DESKTOP NAVBAR (3-column layout) */}
         <div className="d-none d-md-flex justify-content-between align-items-center w-100">
@@ -213,63 +232,144 @@ function Navbar({ toggleSidebar, isSidebarOpen }) {
               )}
             </div>
             {isLoggedIn ? (
-              <div className="dropdown">
-                <button
-                  className="btn btn-outline-secondary d-flex align-items-center gap-2 dropdown-toggle"
-                  type="button"
-                  id="dropdownUser"
-                  data-bs-toggle="dropdown"
-                  aria-expanded="false"
-                >
-                  <img
-                    src={userPlaceholder}
-                    alt="User"
-                    className="rounded-circle"
-                    width="35"
-                    height="35"
-                  />
-                  <span>
-                    {user?.name
-                      ?.split(" ")
-                      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-                      .join(" ") ||
-                      user?.email ||
-                      "User"}
-                    {user?.role ? ` (${user.role})` : ""}
-                  </span>
-                </button>
-                <ul
-                  className="dropdown-menu dropdown-menu-end"
-                  aria-labelledby="dropdownUser"
-                >
-                  <li>
-                    <a className="dropdown-item" href="/profile">
-                      <i className="fas fa-user me-2"></i>Profile
-                    </a>
-                  </li>
-                  <li>
-                    <a className="dropdown-item" href="/settings">
-                      <i className="fas fa-cog me-2"></i>Settings
-                    </a>
-                  </li>
-                  <li>
-                    <hr className="dropdown-divider" />
-                  </li>
-                  <li>
-                    <button
-                      className="dropdown-item text-danger"
-                      onClick={handleLogout}
-                    >
-                      <i className="fas fa-sign-out-alt me-2"></i>Logout
-                    </button>
-                  </li>
-                </ul>
-              </div>
-            ) : (
+              // <div className="dropdown">
+              //   <button
+              //     className="btn btn-outline-secondary d-flex align-items-center gap-2 dropdown-toggle"
+              //     type="button"
+              //     id="dropdownUser"
+              //     data-bs-toggle="dropdown"
+              //     aria-expanded="false"
+              //   >
+              //     <img
+              //       src={userPlaceholder}
+              //       alt="User"
+              //       className="rounded-circle"
+              //       width="35"
+              //       height="35"
+              //     />
+              //     <span>
+              //       {user?.name
+              //         ?.split(" ")
+              //         .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+              //         .join(" ") ||
+              //         user?.email ||
+              //         "User"}
+              //       {user?.role ? ` (${user.role})` : ""}
+              //     </span>
+              //   </button>
+              //   <ul
+              //     className="dropdown-menu dropdown-menu-end"
+              //     aria-labelledby="dropdownUser"
+              //   >
+              //     <li>
+              //       <a className="dropdown-item" href="/profile">
+              //         <i className="fas fa-user me-2"></i>Profile
+              //       </a>
+              //     </li>
+              //     <li>
+              //       <a className="dropdown-item" href="/settings">
+              //         <i className="fas fa-cog me-2"></i>Settings
+              //       </a>
+              //     </li>
+              //     <li>
+              //       <hr className="dropdown-divider" />
+              //     </li>
+              //     <li>
+              //       <button
+              //         className="dropdown-item text-danger"
+              //         onClick={handleLogout}
+              //       >
+              //         <i className="fas fa-sign-out-alt me-2"></i>Logout
+              //       </button>
+              //     </li>
+              //   </ul>
+              // </div>
+
+              <div className="dropdown" style={{ position: "relative" }}>
+  <button
+    className={`btn btn-outline-secondary d-flex align-items-center gap-2 dropdown-toggle ${
+      dropdownOpen ? "show" : ""
+    }`}
+    type="button"
+    id="dropdownUser"
+    aria-expanded={dropdownOpen}
+    onClick={toggleDropdown}
+  >
+    <img
+      src={userPlaceholder}
+      alt="User"
+      className="rounded-circle"
+      width="35"
+      height="35"
+    />
+    <span>
+      {user?.name
+        ?.split(" ")
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(" ") ||
+        user?.email ||
+        "User"}
+      {/* {user?.role ? ` (${user.role})` : ""} */}
+    </span>
+  </button>
+
+  <ul
+    className={`dropdown-menu dropdown-menu-end ${dropdownOpen ? "show" : ""}`}
+    aria-labelledby="dropdownUser"
+    style={{ position: "absolute" }}
+  >
+
+
+    {/* Show user role here */}
+    {user?.role && (
+      <li>
+        <span
+          className="dropdown-item text-muted"
+          style={{ cursor: "default", fontStyle: "italic" }}
+        >
+          <i className="fas fa-user-tag me-2"></i>
+          Role: {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+        </span>
+      </li>
+    )}
+
+    <li>
+      <a className="dropdown-item" href="/profile" onClick={closeDropdown}>
+        <i className="fas fa-user me-2"></i>Profile
+      </a>
+    </li>
+
+
+    <li>
+      <a className="dropdown-item" href="/settings" onClick={closeDropdown}>
+        <i className="fas fa-cog me-2"></i>Settings
+      </a>
+    </li>
+    <li>
+      <hr className="dropdown-divider" />
+    </li>
+    <li>
+      <button
+        className="dropdown-item text-danger"
+        onClick={() => {
+          closeDropdown();
+          handleLogout();
+        }}
+      >
+        <i className="fas fa-sign-out-alt me-2"></i>Logout
+      </button>
+    </li>
+  </ul>
+</div>
+
+
+            ) : 
+            (
               <button className="btn btn-secondary" onClick={handleSignIn}>
                 Sign In
               </button>
-            )}
+            )
+            }
           </div>
         </div>
 
@@ -405,59 +505,141 @@ function Navbar({ toggleSidebar, isSidebarOpen }) {
                   </div>
                 )}
               </div>
+             
+
               {isLoggedIn ? (
-                <div className="dropdown">
-                  <button
-                    className="btn btn-outline-secondary d-flex align-items-center gap-2 dropdown-toggle"
-                    type="button"
-                    id="dropdownUserMobile"
-                    data-bs-toggle="dropdown"
-                    aria-expanded="false"
-                  >
-                    <img
-                      src={userPlaceholder}
-                      alt="User"
-                      className="rounded-circle"
-                      width="35"
-                      height="35"
-                    />
-                    <span>
-                      {user?.name
-                        ?.split(" ")
-                        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-                        .join(" ") ||
-                        user?.email ||
-                        "User"}
-                      {user?.role ? ` (${user.role})` : ""}
-                    </span>
-                  </button>
-                  <ul
-                    className="dropdown-menu dropdown-menu-end"
-                    aria-labelledby="dropdownUserMobile"
-                  >
-                    <li>
-                      <a className="dropdown-item" href="/profile">
-                        <i className="fas fa-user me-2"></i>Profile
-                      </a>
-                    </li>
-                    <li>
-                      <a className="dropdown-item" href="/settings">
-                        <i className="fas fa-cog me-2"></i>Settings
-                      </a>
-                    </li>
-                    <li>
-                      <hr className="dropdown-divider" />
-                    </li>
-                    <li>
-                      <button
-                        className="dropdown-item text-danger"
-                        onClick={handleLogout}
-                      >
-                        <i className="fas fa-sign-out-alt me-2"></i>Logout
-                      </button>
-                    </li>
-                  </ul>
-                </div>
+                // <div className="dropdown">
+                //   <button
+                //     className="btn btn-outline-secondary d-flex align-items-center gap-2 dropdown-toggle"
+                //     type="button"
+                //     id="dropdownUserMobile"
+                //     data-bs-toggle="dropdown"
+                //     aria-expanded="false"
+                //   >
+                //     <img
+                //       src={userPlaceholder}
+                //       alt="User"
+                //       className="rounded-circle"
+                //       width="35"
+                //       height="35"
+                //     />
+                //     <span>
+                //       {user?.name
+                //         ?.split(" ")
+                //         .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+                //         .join(" ") ||
+                //         user?.email ||
+                //         "User"}
+                //       {user?.role ? ` (${user.role})` : ""}
+                //     </span>
+                //   </button>
+                //   <ul
+                //     className="dropdown-menu dropdown-menu-end"
+                //     aria-labelledby="dropdownUserMobile"
+                //   >
+                //     <li>
+                //       <a className="dropdown-item" href="/profile">
+                //         <i className="fas fa-user me-2"></i>Profile
+                //       </a>
+                //     </li>
+                //     <li>
+                //       <a className="dropdown-item" href="/settings">
+                //         <i className="fas fa-cog me-2"></i>Settings
+                //       </a>
+                //     </li>
+                //     <li>
+                //       <hr className="dropdown-divider" />
+                //     </li>
+                //     <li>
+                //       <button
+                //         className="dropdown-item text-danger"
+                //         onClick={handleLogout}
+                //       >
+                //         <i className="fas fa-sign-out-alt me-2"></i>Logout
+                //       </button>
+                //     </li>
+                //   </ul>
+                // </div>
+
+
+                
+              <div className="dropdown" style={{ position: "relative" }}>
+  <button
+    className={`btn btn-outline-secondary d-flex align-items-center gap-2 dropdown-toggle ${
+      dropdownOpen ? "show" : ""
+    }`}
+    type="button"
+    id="dropdownUser"
+    aria-expanded={dropdownOpen}
+    onClick={toggleDropdown}
+  >
+    <img
+      src={userPlaceholder}
+      alt="User"
+      className="rounded-circle"
+      width="35"
+      height="35"
+    />
+    <span>
+      {user?.name
+        ?.split(" ")
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(" ") ||
+        user?.email ||
+        "User"}
+      {/* {user?.role ? ` (${user.role})` : ""} */}
+    </span>
+  </button>
+
+  <ul
+    className={`dropdown-menu dropdown-menu-end ${dropdownOpen ? "show" : ""}`}
+    aria-labelledby="dropdownUser"
+    style={{ position: "absolute" }}
+  >
+
+
+      {/* Show user role here */}
+    {user?.role && (
+      <li>
+        <span
+          className="dropdown-item text-muted"
+          style={{ cursor: "default", fontStyle: "italic" }}
+        >
+          <i className="fas fa-user-tag me-2"></i>
+          Role: {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+        </span>
+      </li>
+    )}
+    <li>
+      <a className="dropdown-item" href="/profile" onClick={closeDropdown}>
+        <i className="fas fa-user me-2"></i>Profile
+      </a>
+    </li>
+
+  
+
+    <li>
+      <a className="dropdown-item" href="/settings" onClick={closeDropdown}>
+        <i className="fas fa-cog me-2"></i>Settings
+      </a>
+    </li>
+    <li>
+      <hr className="dropdown-divider" />
+    </li>
+    <li>
+      <button
+        className="dropdown-item text-danger"
+        onClick={() => {
+          closeDropdown();
+          handleLogout();
+        }}
+      >
+        <i className="fas fa-sign-out-alt me-2"></i>Logout
+      </button>
+    </li>
+  </ul>
+</div>
+                
               ) : (
                 <button className="btn btn-secondary" onClick={handleSignIn}>
                   Sign In

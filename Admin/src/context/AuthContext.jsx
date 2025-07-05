@@ -23,7 +23,7 @@ const AuthProvider = ({ children }) => {
         setPermissions(parsedPermissions || []);
       } catch (error) {
         console.error("Failed to parse permissions from localStorage", error);
-        setPermissions([]); // Default to an empty array on error
+        setPermissions([]);
       }
 
       try {

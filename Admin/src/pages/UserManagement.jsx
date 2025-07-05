@@ -856,6 +856,7 @@ function UserManagement() {
   const [editUser, setEditUser] = useState(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  
   const [page, setPage] = useState(1);
   const [usersPerPage, setUsersPerPage] = useState(10);
 
@@ -915,6 +916,7 @@ const handleAddUser = async (e) => {
   try {
     if (roleHierarchy[newUser.role] >= roleHierarchy[user.role]) {
       setMessage("You can't assign a role higher or equal to your own.");
+      setLoading(false);
       return;
     }
 
@@ -923,15 +925,10 @@ const handleAddUser = async (e) => {
     });
 
     setMessage("User added successfully!");
-    setNewUser({ name: "", email: "", password: "", role: "", status: "active" });
-    fetchUsers();
+    setNewUser({ name: "", email: "", password: "", mobile: "", role: "", status: "active" });
 
-    // ✅ Close modal using Bootstrap JS
-    const modalEl = document.getElementById("addUserModal");
-    if (modalEl) {
-      const modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
-      modalInstance.hide();
-    }
+
+    fetchUsers(); 
 
   } catch (err) {
     console.error(err);
@@ -1114,14 +1111,15 @@ const handleAddUser = async (e) => {
 
 <div className="table-responsive mt-4 shadow-sm rounded-3">
   <table className="table table-hover align-middle mb-0 border rounded-3 overflow-hidden">
-    <thead className="table-light text-nowrap">
+    <thead className="table-light fw-semibold text-nowrap">
       <tr>
-        <th scope="col" className="fw-semibold">ID</th>
-        <th scope="col" className="fw-semibold">Name</th>
-        <th scope="col" className="fw-semibold">Email</th>
-        <th scope="col" className="fw-semibold">Status</th>
-        <th scope="col" className="fw-semibold">Role</th>
-        <th scope="col" className="text-center fw-semibold">Actions</th>
+        <th scope="col" >ID</th>
+        <th scope="col" >Name</th>
+        <th scope="col">Email</th>
+        <th scope="col" >Mobile</th>
+        <th scope="col" >Status</th>
+        <th scope="col" >Role</th>
+        <th scope="col" className="text-center">Actions</th>
       </tr>
     </thead>
     <tbody>
@@ -1135,6 +1133,7 @@ const handleAddUser = async (e) => {
             <td>{u.id}</td>
             <td>{u.name}</td>
             <td>{u.email}</td>
+            <td>{u.mobile}</td>
             <td>
               <span className={`badge rounded-pill px-3 py-2 fw-medium text-uppercase small
                 ${u.status === "active"
@@ -1206,6 +1205,31 @@ const handleAddUser = async (e) => {
                     <input type="password" placeholder="Password" className="form-control" value={newUser.password}
                       onChange={(e) => setNewUser({ ...newUser, password: e.target.value })} required />
                   </div>
+
+
+
+                  <div className="col-md-6">
+                    <input 
+                    type="tel" 
+                    placeholder="Mobile" 
+                    className="form-control" 
+                    value={newUser.mobile}
+                    maxLength={10}
+                      onChange={(e) => 
+                      {
+    const value = e.target.value;
+    if (/^\d*$/.test(value)) {
+                        setNewUser({ ...newUser, mobile: e.target.value })} 
+
+                      }
+                    }
+                      required />
+                  </div>
+
+
+
+
+
                   <div className="col-md-6">
                     <select className="form-control" value={newUser.role}
                       onChange={(e) => setNewUser({ ...newUser, role: e.target.value })} required>
@@ -1258,6 +1282,15 @@ const handleAddUser = async (e) => {
                         value={editUser.password || ""} onChange={(e) =>
                           setEditUser({ ...editUser, password: e.target.value })} />
                     </div>
+
+
+                    
+                    <div className="col-md-6">
+                    <input type="text" placeholder="Mobile" className="form-control" value={editUser.mobile || ""}
+                      onChange={(e) => setEditUser({ ...editUser, mobile: e.target.value })} required />
+                    </div>
+
+
                     <div className="col-md-6">
                       <select className="form-control" value={editUser.role}
                         onChange={(e) => setEditUser({ ...editUser, role: e.target.value })} required>

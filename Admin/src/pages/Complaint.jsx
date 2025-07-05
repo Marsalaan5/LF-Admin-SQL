@@ -11,6 +11,7 @@ function Complaint() {
 
   const [title, setTitle] = useState("");
   const [mobileNumber, setMobileNumber] = useState("");
+  const [address, setAddress] = useState("");
   const [categories, setCategories] = useState("");
   const [categoryList, setCategoryList] = useState([]);
   const [description, setDescription] = useState("");
@@ -50,7 +51,7 @@ function Complaint() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!title || !categories || !description) {
+    if (!title || !categories || !mobileNumber || !address || !description) {
       setError("All fields are required");
       return;
     }
@@ -68,6 +69,7 @@ function Complaint() {
     const formData = new FormData();
     formData.append("title", title);
     formData.append("mobileNumber", mobileNumber);
+    formData.append("address", address);
     formData.append("categories", categories);
     formData.append("description", description);
     if (image) {
@@ -88,11 +90,12 @@ function Complaint() {
 
       if (response.status === 200) {
         setTitle("");
+        setAddress("");
+        setMobileNumber("");
         setCategories("");
         setDescription("");
         setImage(null);
         setPreview(null);
-        setMobileNumber("");
         toast.success("Your complaint has been submitted successfully.");
       } else {
         toast.error("Failed to submit complaint. Please try again later.");
@@ -141,7 +144,7 @@ function Complaint() {
         )}
 
         <form onSubmit={handleSubmit} encType="multipart/form-data">
-          <div className="mb-3">
+          <div className="mb-2">
             <label htmlFor="title" className="form-label">
               Title
             </label>
@@ -155,7 +158,7 @@ function Complaint() {
             />
           </div>
 
-          <div className="mb-3">
+          <div className="mb-2">
             <label htmlFor="mobileNumber" className="form-label">
               Mobile Number
             </label>
@@ -170,7 +173,24 @@ function Complaint() {
             />
           </div>
 
-          <div className="mb-3">
+
+          <div className="mb-2">
+            <label htmlFor="address" className="form-label">
+              Address
+            </label>
+            <input
+              type="text"
+              className="form-control"
+              id="address"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              required
+              // pattern="[0-9]{10}"
+              title="Enter your address"
+            />
+          </div>
+
+          <div className="mb-2">
             <label htmlFor="categories" className="form-label">
               Category
             </label>
@@ -189,7 +209,7 @@ function Complaint() {
             </select>
           </div>
 
-          <div className="mb-3">
+          <div className="mb-2">
             <label htmlFor="description" className="form-label">
               Description
             </label>
@@ -203,7 +223,7 @@ function Complaint() {
             />
           </div>
 
-          <div className="mb-3">
+          <div className="mb-2">
             <label htmlFor="image" className="form-label">
               Upload Image
             </label>
@@ -217,7 +237,7 @@ function Complaint() {
           </div>
 
           {preview && (
-            <div className="mb-3">
+            <div className="mb-2">
               <img
                 src={preview}
                 alt="Preview"

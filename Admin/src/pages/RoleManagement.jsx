@@ -203,7 +203,7 @@ function RolesManagement() {
 
       <div className="mt-5">
 
-      <table className="table table-sm table-hover mb-0 align-middle text-sm" style={{ fontSize: "13px" }}>
+      {/* <table className="table table-sm table-hover mb-0 align-middle text-sm" style={{ fontSize: "13px" }}>
         <thead className="table-dark  text-uppercase">
           <tr>
             <th style={{ width: "60px" }}>ID</th>
@@ -217,7 +217,7 @@ function RolesManagement() {
             <tr key={role.id}>
               <td className="text-muted">{role.id}</td>
               <td className="fw-semibold text-capitalize">{role.name}</td>
-              <td>{formatPermissions(role.permissions)}</td>
+              <td>{formatPermissions(role.permissions)}</td> */}
               {/* <td className="d-flex text-center">
                 <button
                   className="btn btn-primary btn-sm mx-1"
@@ -232,6 +232,9 @@ function RolesManagement() {
                   Delete
                 </button>
               </td> */}
+
+
+{/*               
               <td className="d-flex justify-content-center">
   <button
     className="btn btn-outline-primary btn-sm mx-1"
@@ -252,7 +255,56 @@ function RolesManagement() {
             </tr>
           ))}
         </tbody>
-      </table>
+      </table> */}
+
+
+
+      <div className="table-responsive">
+  <table className="table table-hover table-striped align-middle rounded-3 overflow-hidden shadow-sm">
+    <thead className="table-light  fw-semibold ">
+      <tr>
+        <th style={{ width: "60px" }}>#</th>
+        <th>Role Name</th>
+        <th>Permissions</th>
+        <th className="text-center" style={{ width: "120px" }}>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {roles.length === 0 ? (
+        <tr>
+          <td colSpan="4" className="text-center text-muted py-4">
+            No roles found.
+          </td>
+        </tr>
+      ) : (
+        roles.map((role) => (
+          <tr key={role.id}>
+            <td className="text-muted">{role.id}</td>
+            <td className="fw-semibold text-capitalize">{role.name}</td>
+            <td className="small text-muted">{formatPermissions(role.permissions)}</td>
+            <td className="d-flex justify-content-center gap-2">
+              <button
+                className="btn btn-outline-primary btn-sm"
+                onClick={() => handleEdit(role)}
+                title="Edit"
+              >
+                <i className="fas fa-pen"></i>
+              </button>
+              <button
+                className="btn btn-outline-danger btn-sm"
+                onClick={() => handleDelete(role.id)}
+                title="Delete"
+              >
+                <i className="fas fa-trash"></i>
+              </button>
+            </td>
+          </tr>
+        ))
+      )}
+    </tbody>
+  </table>
+</div>
+
       </div>
 
       {/* Modal for adding/editing a role */}

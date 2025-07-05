@@ -1899,6 +1899,8 @@ function ComplaintManagement() {
   const [statusOptions, setStatusOptions] = useState([]);
   const [modalImage, setModalImage] = useState(null);
   const [activeStatus, setActiveStatus] = useState("total");
+  const [selectedUser, setSelectedUser] = useState(null);
+
 
   const [page, setPage] = useState(1);
   const location = useLocation();
@@ -1917,6 +1919,7 @@ function ComplaintManagement() {
       headers: { Authorization: `Bearer ${token}` },
     });
     setUsers(res.data.users);
+    console.log(res.data.users)
   };
 
   const fetchCategories = async () => {
@@ -1955,6 +1958,12 @@ function ComplaintManagement() {
   const closeModal = () => {
     setModalImage(null);
   };
+
+  const handleViewUser = (userId) => {
+  const userInfo = userMap[userId];
+  setSelectedUser(userInfo);
+};
+
 
   const userMap = Object.fromEntries(users.map((u) => [u.id, u]));
   const categoryMap = Object.fromEntries(categoryList.map((c) => [c.id, c]));
@@ -2129,10 +2138,12 @@ function ComplaintManagement() {
               <th>User</th>
               <th>Title</th>
               <th>Mobile</th>
+              <th>Address</th>
               <th>Category</th>
               <th>Description</th>
               <th>Image</th>
               <th>Status</th>
+              <th>Action</th>
             </tr>
           </thead>
           <tbody>
@@ -2156,6 +2167,7 @@ function ComplaintManagement() {
 
                     <td>{c.title}</td>
                     <td>{c.mobileNumber}</td>
+                    <td>{c.address}</td>
                     <td>{category?.category_name || "N/A"}</td>
                     <td>{c.description.slice(0, 30)}{c.description.length > 30 && "..."}</td>
                     <td>
@@ -2188,6 +2200,16 @@ function ComplaintManagement() {
                         </select>
                       )}
                     </td>
+
+                    <td>
+  <button
+    className="btn btn-sm"
+    onClick={() => handleViewUser(c.user_id)}
+  >
+    <i className="fas fa-eye"></i> 
+  </button>
+</td>
+
                   </tr>
                 );
               })
@@ -2237,6 +2259,40 @@ function ComplaintManagement() {
           </div>
         </div>
       )}
+
+
+      {selectedUser && (
+  <div
+    className="modal fade show d-block"
+    tabIndex="-1"
+    role="dialog"
+    style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
+    onClick={() => setSelectedUser(null)}
+  >
+    <div
+      className="modal-dialog modal-dialog-centered"
+      role="document"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="modal-content">
+        <div className="modal-header">
+          <h5 className="modal-title">Customer Profile</h5>
+          <button type="button" className="btn-close" onClick={() => setSelectedUser(null)}></button>
+        </div>
+        <div className="modal-body">
+          <p><strong>ID:</strong> {selectedUser.id}</p>
+          <p><strong>Name:</strong> {selectedUser.name}</p>
+          <p><strong>Email:</strong> {selectedUser.email}</p>
+          <p><strong>Mobile:</strong> {selectedUser.mobile || "N/A"}</p>
+          {/* <p><strong>Address:</strong> {selectedUser.address|| "N/A"}</p> */}
+          <p><strong>Role:</strong> {selectedUser.role}</p>
+          {/* You can show more fields if available */}
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+
 
     </div>
   );

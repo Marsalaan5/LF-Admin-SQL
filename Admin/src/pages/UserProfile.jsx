@@ -126,7 +126,11 @@ function UserProfile() {
           <div>
             <h3 className="mb-0">{user.name}</h3>
             <p className="text-muted mb-0">{user.email}</p>
+            <p className="text-muted mb-0">{user.mobile}</p>
           </div>
+          
+
+         
         </div>
 
         <hr />
@@ -135,6 +139,7 @@ function UserProfile() {
           <div className="col-md-6">
             <strong>Role:</strong> {user.role}
           </div>
+          
           <div className="col-md-6">
             <strong>Status:</strong>{" "}
             <span

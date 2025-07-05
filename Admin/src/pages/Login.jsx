@@ -19,47 +19,78 @@ function Login() {
     }
   }, [navigate]);
 
+  // const handleSubmit = async (e) => {
+  //   e.preventDefault();
+  //   setIsLoading(true);
+  //   setErrorMessage("");
+
+  //   try {
+  //     const response = await axios.post("http://localhost:5001/auth/login", {
+  //       email,
+  //       password,
+  //     });
+
+  //     //  const { token, result, permissions } = response.data;
+
+  //     // // Store token, user, and permissions in localStorage
+  //     // localStorage.setItem("token", token);
+  //     // localStorage.setItem("user", JSON.stringify(result));
+  //     // localStorage.setItem("permissions", JSON.stringify(permissions)); // Store permissions in localStorage
+
+  //     // // Update context state with token, user, and permissions
+  //     // login(token, result, permissions); // Pass permissions from API response
+
+  //     localStorage.setItem("token", response.data.token);
+  //     localStorage.setItem("user", JSON.stringify(response.data.result));
+  //     localStorage.setItem("permissions", JSON.stringify(permissions));
+
+  //     login(
+  //       response.data.token,
+  //       response.data.result,
+  //       response.data.permissions
+  //     );
+
+  //     navigate("/");
+  //   } catch (error) {
+  //     setErrorMessage(
+  //       error?.response?.data?.message ||
+  //         "Something went wrong, please try again later."
+  //     );
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
+
+
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setErrorMessage("");
+  e.preventDefault();
+  setIsLoading(true);
+  setErrorMessage("");
 
-    try {
-      const response = await axios.post("http://localhost:5001/auth/login", {
-        email,
-        password,
-      });
+  try {
+    const response = await axios.post("http://localhost:5001/auth/login", {
+      email,
+      password,
+    });
 
-      //  const { token, result, permissions } = response.data;
+    // Pass proper values to context
+    login(
+      response.data.token,
+      response.data.result,
+      response.data.permissions
+    );
 
-      // // Store token, user, and permissions in localStorage
-      // localStorage.setItem("token", token);
-      // localStorage.setItem("user", JSON.stringify(result));
-      // localStorage.setItem("permissions", JSON.stringify(permissions)); // Store permissions in localStorage
+    navigate("/");
+  } catch (error) {
+    setErrorMessage(
+      error?.response?.data?.message ||
+        "Something went wrong, please try again later."
+    );
+  } finally {
+    setIsLoading(false);
+  }
+};
 
-      // // Update context state with token, user, and permissions
-      // login(token, result, permissions); // Pass permissions from API response
-
-      localStorage.setItem("token", response.data.token);
-      localStorage.setItem("user", JSON.stringify(response.data.result));
-      localStorage.setItem("permissions", JSON.stringify(permissions));
-
-      login(
-        response.data.token,
-        response.data.result,
-        response.data.permissions
-      );
-
-      navigate("/");
-    } catch (error) {
-      setErrorMessage(
-        error?.response?.data?.message ||
-          "Something went wrong, please try again later."
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   return (
     <div

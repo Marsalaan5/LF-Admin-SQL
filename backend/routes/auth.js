@@ -114,6 +114,7 @@ const registerSchema = Joi.object({
     .max(128)
     .pattern(new RegExp("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).+"))
     .required(),
+     mobile: Joi.string().pattern(/^\d{10}$/).optional(),
   role: Joi.string()
     .valid("user", "admin", "super admin", "viewer")
     .insensitive()
@@ -217,7 +218,7 @@ router.post(
       return res.status(400).json({ message: error.details[0].message });
     }
 
-    const { name, email, password, role = "user", status = "active" } = value;
+    const { name, email, password,mobile, role = "user", status = "active" } = value;
     const image = req.file ? req.file.path : null;
     const token = req.headers.authorization?.split(" ")[1];
 
@@ -247,8 +248,8 @@ router.post(
 
       // Insert user
       const [result] = await pool.execute(
-        "INSERT INTO login (name, email, password, role_id, role, image, insert_time, status) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)",
-        [name, email, hashedPassword, roleId, role, image, status]
+        "INSERT INTO login (name, email, password,mobile, role_id, role, image, insert_time, status) VALUES (?, ?,?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)",
+        [name, email, hashedPassword,mobile, roleId, role, image, status]
       );
 
       io.emit("new-signup", { name, email });
@@ -259,6 +260,7 @@ router.post(
       await logAudit(adminId, "INSERT", result.insertId, null, {
         name,
         email,
+        mobile,
         role_id: roleId,
         role,
         image,
@@ -309,7 +311,7 @@ router.post("/login", async (req, res) => {
     const roleId = user.role_id;
 
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role, role_id: roleId },
+      { id: user.id, email: user.email, mobile:user.mobile, role: user.role, role_id: roleId },
       process.env.JWT_SECRET,
       { expiresIn: "1d" }
     );
@@ -349,6 +351,7 @@ router.post("/login", async (req, res) => {
         id: user.id,
         name: user.name,
         email: user.email,
+        mobile: user.mobile,
         role: user.role,
         role_id: roleId,
         last_login: now,
@@ -437,7 +440,7 @@ router.get("/profile", authenticateToken, async (req, res) => {
     const userId = req.user.id;
 
     const [userRows] = await pool.execute(
-      "SELECT id, name, email, image FROM login WHERE id = ?",
+      "SELECT id, name, email,mobile, image FROM login WHERE id = ?",
       [userId]
     );
 
@@ -452,15 +455,53 @@ router.get("/profile", authenticateToken, async (req, res) => {
   }
 });
 
+// router.put("/profile", authenticateToken, async (req, res) => {
+//   try {
+//     const userId = req.user.id;
+//     const { name, email, password,mobile } = req.body;
+
+//     if (!name || !email) {
+//       return res.status(400).json({ message: "Name and email are required" });
+//     }
+
+//     const [existingUser] = await pool.execute(
+//       "SELECT * FROM login WHERE id = ?",
+//       [userId]
+//     );
+//     if (existingUser.length === 0) {
+//       return res.status(404).json({ message: "User not found" });
+//     }
+
+//     const hashedPassword = password
+//       ? await bcrypt.hash(password, 10)
+//       : existingUser[0].password;
+
+//     await pool.execute(
+//       "UPDATE login SET name = ?, email = ?, password = ?, mobile = ?  WHERE id = ?",
+//       [name, email, hashedPassword,mobile, userId]
+//     );
+
+//     res.status(200).json({ message: "Profile updated successfully" });
+//   } catch (err) {
+//     console.error("Profile update error:", err);
+//     res.status(500).json({ message: "Failed to update profile" });
+//   }
+// });
+
 router.put("/profile", authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
-    const { name, email, password } = req.body;
+    const { name, email, password, mobile } = req.body;
 
+    // Basic validation
     if (!name || !email) {
       return res.status(400).json({ message: "Name and email are required" });
     }
 
+    // Optional: Validate mobile format here if needed
+    // e.g., if (mobile && !isValidMobile(mobile)) return res.status(400)...
+
+    // Check if user exists
     const [existingUser] = await pool.execute(
       "SELECT * FROM login WHERE id = ?",
       [userId]
@@ -469,21 +510,40 @@ router.put("/profile", authenticateToken, async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
+    // Check if email is already used by another user
+    const [emailExists] = await pool.execute(
+      "SELECT id FROM login WHERE email = ? AND id != ?",
+      [email, userId]
+    );
+    if (emailExists.length > 0) {
+      return res.status(400).json({ message: "Email is already in use." });
+    }
+
+    // Hash new password if provided, otherwise keep existing password hash
     const hashedPassword = password
       ? await bcrypt.hash(password, 10)
       : existingUser[0].password;
 
+    // Update user profile with correct parameters order
     await pool.execute(
-      "UPDATE login SET name = ?, email = ?, password = ? WHERE id = ?",
-      [name, email, hashedPassword, userId]
+      "UPDATE login SET name = ?, email = ?, password = ?, mobile = ? WHERE id = ?",
+      [name, email, hashedPassword, mobile, userId]
     );
 
-    res.status(200).json({ message: "Profile updated successfully" });
+    // Fetch updated user info to send back
+    const [updatedUser] = await pool.execute(
+      "SELECT id, name, email, mobile, image FROM login WHERE id = ?",
+      [userId]
+    );
+
+    res.status(200).json(updatedUser[0]);
   } catch (err) {
     console.error("Profile update error:", err);
     res.status(500).json({ message: "Failed to update profile" });
   }
 });
+
+
 
 //dashboard route
 
@@ -540,7 +600,7 @@ router.get(
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
       const [users] = await pool.execute(
-        "SELECT id, name, email,role_id,role,image,status FROM login"
+        "SELECT id, name, email,mobile,role_id,role,image,status FROM login"
       );
       res.status(200).json({ users });
     } catch (err) {
@@ -560,7 +620,7 @@ router.get("/users/:id", authenticateToken, isAdmin, async (req, res) => {
 
   try {
     const [rows] = await pool.execute(
-      `SELECT id, name, email, role_id, role, image, status, insert_time AS insertTime, 
+      `SELECT id, name, email,mobile, role_id, role, image, status, insert_time AS insertTime, 
               last_login AS lastLogin 
        FROM login 
        WHERE id = ?`,
@@ -592,10 +652,11 @@ router.put(
   checkPermission("user_management", "enable", "edit"),
   async (req, res) => {
     const { id } = req.params;
-    const { name, email, password, role_id, role, image, status } = req.body;
+    const { name, email, password,mobile, role_id, role, image, status } = req.body;
     console.log("Received data for update:", {
       name,
       email,
+      mobile,
       role_id,
       role,
       image,
@@ -621,8 +682,8 @@ router.put(
 
       const roleId = parseInt(role_id, 10);
       const [result] = await pool.execute(
-        "UPDATE login SET name = ?, email = ?, password = ?, role_id = ?, role = ?, image = ?, status = ? WHERE id = ?",
-        [name, email, hashedPassword, roleId, role, image, status, id]
+        "UPDATE login SET name = ?, email = ?,password = ?,mobile = ?,  role_id = ?, role = ?, image = ?, status = ? WHERE id = ?",
+        [name, email, hashedPassword, mobile, roleId, role, image, status, id]
       );
       console.log("Updated user:", result);
 
@@ -635,6 +696,7 @@ router.put(
       await logAudit(adminId, "UPDATE", id, oldData, {
         name,
         email,
+        mobile,
         role_id: roleId,
         role,
         image,
@@ -704,7 +766,7 @@ router.get("/search", authenticateToken, async (req, res) => {
 
   try {
     const [results] = await pool.execute(
-      `SELECT id, name, email, role, role_id, image, status
+      `SELECT id, name, email,mobile, role, role_id, image, status
        FROM login
        WHERE name LIKE ? OR role LIKE ?`,
 
@@ -726,7 +788,7 @@ router.get(
   async (req, res) => {
     try {
       const [users] = await pool.execute(
-        "SELECT id, name, email, role, status FROM login"
+        "SELECT id, name, email,mobile, role, status FROM login"
       );
 
       const parser = new Parser();
@@ -1225,6 +1287,7 @@ router.delete(
   }
 );
 
+
 //compalints
 
 router.get(
@@ -1332,22 +1395,23 @@ router.post(
   authenticateToken,
   checkPermission("complaint_management", "enable", "create"),
   async (req, res) => {
-    const { title, categories, description, mobileNumber } = req.body;
+    const { title, categories, description, mobileNumber,address } = req.body;
     const image = req.file ? req.file.filename : null;
     const userId = req.user.id;
 
     try {
       const [insertResult] = await pool.execute(
         `INSERT INTO complaints 
-          (user_id, title, categories, description, image, mobileNumber,status)
-         VALUES (?, ?, ?, ?, ?, ?,?)`,
+          (user_id, title, mobileNumber,address,categories, description, image ,status)
+         VALUES (?, ?, ?,?, ?, ?, ?,?)`,
         [
           userId,
           title,
+          mobileNumber || null,
+          address,
           categories,
           description,
           image,
-          mobileNumber || null,
           "pending",
         ]
       );
@@ -1356,10 +1420,11 @@ router.post(
         id: insertResult.insertId,
         user_id: userId,
         title,
+        mobileNumber,
+        address,
         categories,
         description,
         image,
-        mobileNumber,
         status: "open",
         createdAt: new Date(),
       });

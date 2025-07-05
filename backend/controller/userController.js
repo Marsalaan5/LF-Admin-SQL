@@ -51,9 +51,9 @@ import { pool } from "../server.js";
 import bcrypt from "bcryptjs";
 
 export const createUser = async (req, res) => {
-  const { name, email, password, role, status, image } = req.body;
+  const { name, email, password,mobile, role, status, image } = req.body;
 
-  if (!name || !email || !password || !role || !status) {
+  if (!name || !email || !password ||!mobile || !role || !status) {
     return res.status(400).json({ message: "All fields are required." });
   }
 
@@ -92,8 +92,8 @@ export const createUser = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     await pool.execute(
-      "INSERT INTO login (name, email, password, role_id, role, image, insert_time, status) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)",
-      [name, email, hashedPassword, roleId, role, image || null, status]
+      "INSERT INTO login (name, email, password,mobile, role_id, role, image, insert_time, status) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)",
+      [name, email, hashedPassword,mobile, roleId, role, image || null, status]
     );
 
     res.status(201).json({ message: "User created successfully." });
