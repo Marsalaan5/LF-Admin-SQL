@@ -55,26 +55,37 @@ const upload = multer({
   },
 });
 
-function organizeMenu(menuItems) {
-  const organizedMenu = [];
-  const map = {};
 
-  menuItems.forEach((item) => {
-    map[item.id] = { ...item, children: [] };
-  });
+// function organizeMenu(menuItems) {
+//   const organizedMenu = [];
+//   const map = {};
 
-  menuItems.forEach((item) => {
-    if (item.parent_id === null) {
-      organizedMenu.push(map[item.id]);
-    } else {
-      if (map[item.parent_id]) {
-        map[item.parent_id].children.push(map[item.id]);
-      }
-    }
-  });
+//   menuItems.forEach((item) => {
+//     map[item.id] = { ...item, children: [] };
+//   });
 
-  return organizedMenu;
+//   menuItems.forEach((item) => {
+//     if (item.parent_id === null) {
+//       organizedMenu.push(map[item.id]);
+//     } else {
+//       if (map[item.parent_id]) {
+//         map[item.parent_id].children.push(map[item.id]);
+//       }
+//     }
+//   });
+
+//   return organizedMenu;
+// }
+
+function organizeMenu(menuItems, parentId = null) {
+  return menuItems
+    .filter(item => item.parent_id === parentId)
+    .map(item => ({
+      ...item,
+      children: organizeMenu(menuItems, item.id)
+    }));
 }
+
 
 const logAudit = async (
   adminId,

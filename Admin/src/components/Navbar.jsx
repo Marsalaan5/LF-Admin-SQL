@@ -88,7 +88,8 @@ console.log("User:", user);
     <nav
       className="navbar fixed-top navbar-light"
       style={{
-        background: "linear-gradient(to right, #ff7e5f, #feb47b)",
+        // background: "linear-gradient(to right, #ff7e5f, #feb47b)",
+        background: "linear-gradient(135deg, #4b6cb7, #182848)",
         padding: "10px 20px",
         color: "white",
         zIndex: 1040,
@@ -112,7 +113,7 @@ console.log("User:", user);
                 }}
               />
             </Link>
-            <h5 className="mb-0 fw-semibold text-dark">Admin</h5>
+            <h5 className="mb-0 fw-semibold text-white">Admin</h5>
 
             <div
               className="d-flex align-items-center gap-3"

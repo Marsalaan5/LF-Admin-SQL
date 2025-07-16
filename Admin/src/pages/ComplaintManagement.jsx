@@ -2167,9 +2167,9 @@ function ComplaintManagement() {
 
                     <td>{c.title}</td>
                     <td>{c.mobileNumber}</td>
-                    <td>{c.address}</td>
+                    <td style={{ wordWrap: "break-word", whiteSpace: "normal", maxWidth: "200px" }}>{c.address}</td>
                     <td>{category?.category_name || "N/A"}</td>
-                    <td>{c.description.slice(0, 30)}{c.description.length > 30 && "..."}</td>
+                    <td style={{ wordWrap: "break-word", whiteSpace: "normal", maxWidth: "200px" }}>{c.description}</td>
                     <td>
                       {c.image ? (
                         <img
@@ -2208,6 +2208,7 @@ function ComplaintManagement() {
   >
     <i className="fas fa-eye"></i> 
   </button>
+ 
 </td>
 
                   </tr>

@@ -56,7 +56,9 @@ function Sidebar({ isOpen, userRole }) {
       className={`sidebar-container ${isOpen ? "open" : ""}`}
       style={{
         height: "100vh",
-        background: "linear-gradient(to right, #ff7e5f, #ff7e5f)",
+        // background: "linear-gradient(to right, #ff7e5f, #ff7e5f)",
+        background: "linear-gradient(135deg, #4b6cb7, #182848)",
+
         padding: "20px",
         color: "white",
         overflowY: "auto",

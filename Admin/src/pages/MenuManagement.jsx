@@ -3,6 +3,8 @@ import axios from "axios";
 import { Link } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import toast, { Toaster } from "react-hot-toast";
+import '@fortawesome/fontawesome-free/css/all.min.css';
+
 
 function MenuManagement({ userRole }) {
   const { token } = useContext(AuthContext);
@@ -551,7 +553,7 @@ function MenuManagement({ userRole }) {
                   >
                     Edit
                   </button> */}
-                  <button
+                  {/* <button
                     className="btn btn-sm btn-light me-1"
                     data-bs-toggle="modal"
                     data-bs-target="#menuModal"
@@ -584,7 +586,52 @@ function MenuManagement({ userRole }) {
                     onClick={() => handleToggleStatus(item.id, item.status)}
                   >
                     {isActiveForRole ? "Disable" : "Enable"}
-                  </button>
+                  </button> */}
+                  <button
+  className="btn btn-sm btn-outline-primary me-2"
+  data-bs-toggle="modal"
+  data-bs-target="#menuModal"
+  onClick={() => {
+    setEditingItem(item);
+    setNewItem({
+      title: item.title,
+      path: item.path,
+      icon: item.icon || "",
+      roles: itemRoles,
+      parent_id: item.parent_id || null,
+      status: item.status,
+      order_by: item.order_by,
+    });
+  }}
+>
+  {/* <i className="fas fa-edit me-1"></i> */}
+  <i className="fas fa-edit"></i>
+</button>
+
+<button
+  className="btn btn-outline-danger btn-sm me-2"
+  onClick={() => handleDelete(item.id)}
+>
+  <i className="fas fa-trash-alt"></i> 
+</button>
+
+<button
+  className={`btn btn-sm btn-outline-dark me-2 ${
+    isActiveForRole ? "btn-warning" : "btn-success"
+  }`}
+  onClick={() => handleToggleStatus(item.id, item.status)}
+>
+  {isActiveForRole ? (
+    <>
+      <i className="fas fa-ban"></i>
+    </>
+  ) : (
+    <>
+      <i className="fas fa-check"></i>
+    </>
+  )}
+</button>
+
                 </div>
               </li>
             );
