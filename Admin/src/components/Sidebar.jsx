@@ -7,6 +7,8 @@ function Sidebar({ isOpen, userRole }) {
   const [menuItems, setMenuItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [openItems, setOpenItems] = useState({});
+
 
   useEffect(() => {
     fetchMenuItems();
@@ -33,23 +35,64 @@ function Sidebar({ isOpen, userRole }) {
     }
   };
 
-  const renderMenu = (items) =>
-    items.map((item) => (
-      <li key={item.id} className="nav-item mb-2">
+  // const renderMenu = (items) =>
+  //   items.map((item) => (
+  //     <li key={item.id} className="nav-item mb-2">
+  //       <Link
+  //         to={item.status === "active" ? item.path : "#"}
+  //         className={`nav-link d-flex align-items-center ${
+  //           item.status === "active" ? "text-white" : "text-secondary"
+  //         }`}
+  //       >
+  //         <i className={`${item.icon} me-2`}></i>
+  //         <span>{item.title}</span>
+  //       </Link>
+  //       {item.children && item.children.length > 0 && (
+  //         <ul className="nav flex-column ms-3">{renderMenu(item.children)}</ul>
+  //       )}
+  //     </li>
+  //   ));
+
+    const toggleItem = (id) => {
+  setOpenItems((prev) => ({ ...prev, [id]: !prev[id] }));
+};
+
+const renderMenu = (items) =>
+  items.map((item) => (
+    <li key={item.id} className="nav-item mb-2">
+      <div
+        className={`nav-link d-flex align-items-center justify-content-between ${
+          item.status === "active" ? "text-white" : "text-secondary"
+        }`}
+        onClick={() => item.children?.length > 0 && toggleItem(item.id)}
+        style={{ cursor: item.children?.length > 0 ? "pointer" : "default" }}
+      >
         <Link
           to={item.status === "active" ? item.path : "#"}
-          className={`nav-link d-flex align-items-center ${
-            item.status === "active" ? "text-white" : "text-secondary"
-          }`}
+          className="d-flex align-items-center"
+          style={{ textDecoration: "none", color: "inherit" }}
         >
           <i className={`${item.icon} me-2`}></i>
           <span>{item.title}</span>
         </Link>
-        {item.children && item.children.length > 0 && (
-          <ul className="nav flex-column ms-3">{renderMenu(item.children)}</ul>
+        {item.children?.length > 0 && (
+          <i
+            className={`fas ${
+              openItems[item.id] ? "fa-chevron-down" : "fa-chevron-right"
+            }`}
+          ></i>
         )}
-      </li>
-    ));
+      </div>
+
+      {item.children && item.children.length > 0 && openItems[item.id] && (
+        <ul className="nav flex-column ms-3">
+          {renderMenu(item.children)}
+        </ul>
+      )}
+    </li>
+  ));
+
+
 
   return (
     <div

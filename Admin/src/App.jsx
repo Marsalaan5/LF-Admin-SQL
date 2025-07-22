@@ -22,7 +22,7 @@ import AuthLayout from "./pages/AuthLayout.jsx";
 import Profile from "./pages/Profile.jsx";
 import UserProfile from "./pages/UserProfile.jsx";
 // import Categories from "./pages/Category.jsx";
-import Category from "./pages/Category.jsx";
+// import Category from "./pages/Category.jsx";
 import ComplaintManagement from "./pages/ComplaintManagement.jsx";
 import Complaint from "./pages/Complaint.jsx";
 import { Toaster } from "react-hot-toast";
@@ -30,6 +30,11 @@ import { Toaster } from "react-hot-toast";
 import MenuManagement from "./pages/MenuManagement.jsx";
 import ForgotPassword from "./pages/ForgotPassword.jsx";
 import ResetPassword from "./pages/ResetPassword.jsx";
+import Category from "./components/submenu/Category.jsx";
+import SubCategory from "./components/submenu/SubCategory.jsx";
+// import Ccms from "./components/submenu/Ccms.jsx";
+// import Water from "./components/submenu/Water.jsx";
+// import ChatBotFlow from "./chatbot/ChatBotFlow.jsx";
 // import { ComplaintProvider } from "./context/ComplaintContext.jsx"; // Adjust path if needed
 
 function App() {
@@ -96,6 +101,30 @@ function App() {
               }
             />
             <Route
+              path="/subcategories"
+              element={
+                <AuthLayout>
+                  <SubCategory />
+                </AuthLayout>
+              }
+            />
+            {/* <Route
+              path="/ccms"
+              element={
+                <AuthLayout>
+                  <Ccms />
+                </AuthLayout>
+              }
+            /> */}
+            {/* <Route
+              path="/water"
+              element={
+                <AuthLayout>
+                  <Water />
+                </AuthLayout>
+              }
+            /> */}
+            <Route
               path="/complaints_management"
               element={
                 <AuthLayout>
@@ -130,6 +159,8 @@ function App() {
               element={<Navigate to="/login" />}
             />
             <Route path="/category" element={<Navigate to="/login" />} />
+            <Route path="/subcategories" element={<Navigate to="/login" />} />
+            {/* <Route path="/ccms" element={<Navigate to="/login" />} /> */}
             <Route
               path="/complaints_management"
               element={<Navigate to="/login" />}
@@ -141,6 +172,7 @@ function App() {
           </>
         )}
       </Routes>
+      {/* <ChatBotFlow/> */}
     </Router>
   );
 }

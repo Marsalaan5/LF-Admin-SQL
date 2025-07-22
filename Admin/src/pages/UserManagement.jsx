@@ -838,7 +838,7 @@
 
 
 // Full updated UserManagement.jsx
-import * as bootstrap from "bootstrap"; // REQUIRED for modal JS usage
+import * as bootstrap from "bootstrap";
 
 import { useEffect, useState, useContext } from "react";
 import axios from "axios";
@@ -929,6 +929,8 @@ const handleAddUser = async (e) => {
 
 
     fetchUsers(); 
+    await fetchRoles();
+
 
   } catch (err) {
     console.error(err);

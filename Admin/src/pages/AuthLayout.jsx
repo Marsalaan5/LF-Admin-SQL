@@ -41,7 +41,7 @@ function AuthLayout({ children }) {
   }, []);
 
   const sidebarStyles = {
-    width: isSidebarOpen ? "250px" : "0",
+    width: isSidebarOpen ? "300px" : "0",
     transition: "left 0.3s, width 0.3s",
     height: "100vh",
     position: isMobile ? "fixed" : "fixed",
@@ -54,7 +54,7 @@ function AuthLayout({ children }) {
   };
 
   const mainContentStyles = {
-    marginLeft: !isMobile && isSidebarOpen ? "250px" : "0",
+    marginLeft: !isMobile && isSidebarOpen ? "305px" : "0",
     transition: "margin-left 0.3s",
     width: "100%",
   };

@@ -5,13 +5,16 @@ import { useLocation, Link } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import { io } from "socket.io-client";
 import toast from "react-hot-toast";
+import ComplaintCharts from '../pages/ComplaintCharts.jsx';
 // import 'react-datepicker/dist/react-datepicker.css';
 
 import ReactDatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+// import ChatBotFlow from "../chatbot/ChatBotFlow.jsx";
 
 function Dashboard() {
   const { token } = useContext(AuthContext);
+  console.log("Dashboard token:", token);
   const [users, setUsers] = useState([]);
   const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -21,10 +24,12 @@ function Dashboard() {
   const [filterRole, setFilterRole] = useState("");
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
+  const [complaints, setComplaints] = useState([]);
+
 
   const socket = useRef(null);
 
-  // Inside the Dashboard component
+
   const location = useLocation();
   const pathnames = location.pathname.split("/").filter((x) => x);
 
@@ -53,6 +58,18 @@ function Dashboard() {
     }
   };
 
+  const fetchComplaints = async () => {
+  try {
+    const res = await axios.get("http://localhost:5001/auth/complaints", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    setComplaints(res.data);
+  } catch (err) {
+    console.error("Failed to fetch complaints", err);
+  }
+};
+
+
   useEffect(() => {
     socket.current = io("http://localhost:5001");
     socket.current.on("connect", () => {
@@ -72,6 +89,7 @@ function Dashboard() {
 
   useEffect(() => {
     fetchUsersAndRoles();
+     fetchComplaints();
   }, [token]);
 
   // Function to get role name by roleId
@@ -276,7 +294,7 @@ function Dashboard() {
       </p>
 
       {/* User Statistics */}
-      <div className="row">
+      <div className="row ">
         {/* Total Users */}
         <div className="col-lg-3 col-md-4 col-sm-6 mb-4">
           <div className="card-stats card">
@@ -307,6 +325,7 @@ function Dashboard() {
             </div>
           </div>
         </div>
+       
 
         {/* Active Users */}
         <div className="col-lg-3 col-md-4 col-sm-6 mb-4">
@@ -383,6 +402,37 @@ function Dashboard() {
           </div>
         </div>
 
+         <div className="col-lg-3 col-md-4 col-sm-6 mb-4">
+          <div className="card-stats card">
+            <div className="card-body">
+              <div className="row">
+                <div className="col-5">
+                  <div className="icon-big text-center icon-warning">
+                    {/* <i className="fas fa-users text-primary"></i> */}
+                    <i className="fas fa-exclamation-circle"></i>
+                  </div>
+                </div>
+                <div className="col-7">
+                  <div className="numbers">
+                    <p className="card-category">Total Complaints</p>
+                    <h4 className="card-title">{complaints.length}</h4>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="card-footer">
+              <hr />
+              <div
+                className="stats"
+                onClick={fetchUsersAndRoles}
+                style={{ cursor: "pointer" }}
+              >
+                <i className="fas fa-sync-alt mr-1"></i> Update Now
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Role Breakdown */}
         {/* {["Super Admin", "Admin", "User"].map((roleKey) => (
           <div className="col-lg-3 col-md-4 col-sm-6 mb-4" key={roleKey}>
@@ -453,17 +503,33 @@ function Dashboard() {
       </div>
 
       {/* Chart */}
-
-      <div className="row">
-        <div className="col-md-6 mb-4">
-          <div className="card-stats card">
-            <div className="card-body">
-              <RoleChart users={filteredUsers} roles={roles} />
-            </div>
-          </div>
-        </div>
+      
+{/* Charts Row */}
+<div className="row">
+  <div className="col-md-4 mb-6">
+    <div className="card shadow-sm">
+      <div className="card-header bg-white fw-bold">Role Distribution</div>
+      <div className="card-body">
+        <RoleChart users={filteredUsers} roles={roles} />
       </div>
     </div>
+  </div>
+
+  <div className="col-md-8 mb-4">
+    <div className="card shadow-sm">
+      <div className="card-header bg-white fw-bold">Complaint Analytics</div>
+      <div className="card-body">
+        <ComplaintCharts />
+      </div>
+    </div>
+  </div>
+</div>
+
+
+{/* <ChatBotFlow /> */}
+      
+    </div>
+
   );
 }
 

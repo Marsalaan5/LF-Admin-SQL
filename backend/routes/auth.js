@@ -88,7 +88,7 @@ function organizeMenu(menuItems, parentId = null) {
 
 
 const logAudit = async (
-  adminId,
+  // adminId,
   action,
   recordId = null,
   oldData = null,
@@ -96,16 +96,16 @@ const logAudit = async (
 ) => {
   try {
     console.log("Logging audit:", {
-      adminId,
+      // adminId,
       action,
       recordId,
       oldData,
       newData,
     });
     await pool.execute(
-      "INSERT INTO audit_log (admin_id, action, record_id, old_data, new_data) VALUES (?, ?, ?, ?, ?)",
+      "INSERT INTO audit_log (action, record_id, old_data, new_data) VALUES (?, ?, ?, ?)",
       [
-        adminId,
+        // adminId,
         action,
         recordId,
         oldData ? JSON.stringify(oldData) : null,
@@ -127,7 +127,7 @@ const registerSchema = Joi.object({
     .required(),
      mobile: Joi.string().pattern(/^\d{10}$/).optional(),
   role: Joi.string()
-    .valid("user", "admin", "super admin", "viewer")
+    .valid("user", "admin", "super admin", "viewer","Water","CCMS")
     .insensitive()
     .required()
     .default("user"),
@@ -215,7 +215,7 @@ router.get("/modules", (req, res) => {
 
 router.post(
   "/register",
-  authenticateToken,
+  // authenticateToken,
   upload.single("image"), // upload first
   async (req, res) => {
     // Image validation
@@ -231,7 +231,7 @@ router.post(
 
     const { name, email, password,mobile, role = "user", status = "active" } = value;
     const image = req.file ? req.file.path : null;
-    const token = req.headers.authorization?.split(" ")[1];
+    // const token = req.headers.authorization?.split(" ")[1];
 
     try {
       // Check if role is valid
@@ -266,9 +266,9 @@ router.post(
       io.emit("new-signup", { name, email });
 
       // Audit log
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      const adminId = decoded.id;
-      await logAudit(adminId, "INSERT", result.insertId, null, {
+      // const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      // const adminId = decoded.id;
+      await logAudit("INSERT", result.insertId, null, {
         name,
         email,
         mobile,
@@ -290,15 +290,96 @@ router.post(
   }
 );
 
+// router.post("/login", async (req, res) => {
+//   const { email, password } = req.body;
+
+//   try {
+//     //  const { error, value } = loginSchema.validate(req.body);
+//     // if (error) {
+//     //   return res.status(400).json({ message: 'Invalid email or password' });
+//     // }
+
+//     const [userRows] = await pool.execute(
+//       "SELECT * FROM login WHERE email = ?",
+//       [email]
+//     );
+
+//     if (userRows.length === 0) {
+//       return res.status(400).json({ message: "Invalid email or password" });
+//     }
+
+//     const user = userRows[0];
+
+//     if (user.status !== "active") {
+//       return res.status(403).json({ message: "Your account is inactive." });
+//     }
+
+//     const isMatch = await bcrypt.compare(password, user.password);
+//     if (!isMatch) {
+//       return res.status(401).json({ message: "Invalid email or password" });
+//     }
+
+//     const roleId = user.role_id;
+
+//     const token = jwt.sign(
+//       { id: user.id, email: user.email, mobile:user.mobile, role: user.role, role_id: roleId },
+//       process.env.JWT_SECRET,
+//       { expiresIn: "1d" }
+//     );
+
+//     // Fetch permissions based on the user's role_id
+//     const [permissionRows] = await pool.execute(
+//       "SELECT permissions FROM roles WHERE id = ?",
+//       [roleId]
+//     );
+
+//     let permissions = {};
+//     if (permissionRows.length > 0) {
+//       try {
+//         permissions = JSON.parse(permissionRows[0].permissions || "{}");
+//       } catch (error) {
+//         console.error("Error parsing permissions JSON:", error);
+//         permissions = {};
+//       }
+//     }
+
+//     const now = new Date();
+
+//     await pool.execute(
+//       "UPDATE login SET token = ?, last_login = ? WHERE id = ?",
+//       [token, now, user.id]
+//     );
+
+//     await logAudit(user.id, "LOGIN", user.id, null, {
+//       login_time: now,
+//       role_id: roleId,
+//     });
+
+//     res.status(200).json({
+//       message: "Login successful",
+//       token,
+//       result: {
+//         id: user.id,
+//         name: user.name,
+//         email: user.email,
+//         mobile: user.mobile,
+//         role: user.role,
+//         role_id: roleId,
+//         last_login: now,
+//       },
+//       permissions,
+//     });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ message: "Something went wrong" });
+//   }
+// });
+
+
 router.post("/login", async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, role } = req.body; // accept role from client
 
   try {
-    //  const { error, value } = loginSchema.validate(req.body);
-    // if (error) {
-    //   return res.status(400).json({ message: 'Invalid email or password' });
-    // }
-
     const [userRows] = await pool.execute(
       "SELECT * FROM login WHERE email = ?",
       [email]
@@ -319,10 +400,36 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
+
+    // if (role !== user.role) {
+    //   return res.status(403).json({ message: "Incorrect role selected" });
+    // }
+
+    // Only check role if it's provided and not "Other"
+// if (role && role !== "Other" && role !== user.role) {
+//   return res.status(403).json({ message: "Incorrect role selected" });
+// }
+
+// If user role is Water or CCMS
+if (user.role === "Water" || user.role === "CCMS") {
+  // Then role from client must exactly match user.role
+  if (role !== user.role) {
+    return res.status(403).json({ message: "Incorrect role selected" });
+  }
+} else {
+  // For other user roles:
+  // role can be "Other" or null or match user.role
+  if (role && role !== "Other" && role !== user.role) {
+    return res.status(403).json({ message: "Incorrect role selected" });
+  }
+}
+
+
+
     const roleId = user.role_id;
 
     const token = jwt.sign(
-      { id: user.id, email: user.email, mobile:user.mobile, role: user.role, role_id: roleId },
+      { id: user.id, email: user.email, mobile: user.mobile, role: user.role, role_id: roleId },
       process.env.JWT_SECRET,
       { expiresIn: "1d" }
     );
@@ -374,6 +481,7 @@ router.post("/login", async (req, res) => {
     res.status(500).json({ message: "Something went wrong" });
   }
 });
+
 
 //  password reset link
 router.post("/forgot-password", async (req, res) => {
@@ -1061,8 +1169,8 @@ router.delete(
   }
 );
 
-//
-// route
+
+// menu route
 
 router.get(
   "/menu",
@@ -1191,6 +1299,27 @@ router.patch("/menu/:id/status", async (req, res) => {
 
 //categories
 
+// router.get(
+//   "/categories",
+//   authenticateToken,
+//   checkPermission("category", "enable", "view"),
+//   async (req, res) => {
+//     try {
+//       const [rows] = await pool.execute("SELECT * FROM category");
+//       res.json(rows);
+//     } catch (error) {
+//       console.error("Error fetching categories:", error);
+//       res.status(500).send("Server Error");
+//     }
+//   }
+// );
+
+
+
+
+//category api
+
+// Get all categories
 router.get(
   "/categories",
   authenticateToken,
@@ -1206,6 +1335,28 @@ router.get(
   }
 );
 
+
+router.get(
+  "/categories/:categoryId",
+  authenticateToken,
+  checkPermission("category", "enable", "view"),
+  async (req, res) => {
+    const { categoryId } = req.params;
+    try {
+      const [rows] = await pool.execute("SELECT * FROM category WHERE id = ?", [categoryId]);
+      if (rows.length === 0) {
+        return res.status(404).json({ error: "Category not found" });
+      }
+      res.json(rows[0]);
+    } catch (error) {
+      console.error("Error fetching category:", error);
+      res.status(500).send("Server Error");
+    }
+  }
+);
+
+
+// Create category
 router.post(
   "/categories",
   authenticateToken,
@@ -1214,9 +1365,7 @@ router.post(
     const { category_name, description } = req.body;
 
     if (!category_name || !description) {
-      return res
-        .status(400)
-        .json({ error: "Category_Name and description are required" });
+      return res.status(400).json({ error: "Category name and description are required." });
     }
 
     try {
@@ -1224,14 +1373,7 @@ router.post(
         "INSERT INTO category (category_name, description) VALUES (?, ?)",
         [category_name, description]
       );
-
-      const newCategory = {
-        id: result.insertId,
-        category_name,
-        description,
-      };
-
-      res.status(201).json(newCategory);
+      res.status(201).json({ id: result.insertId, category_name, description });
     } catch (error) {
       console.error("Error creating category:", error);
       res.status(500).json({ error: "Error creating category" });
@@ -1239,6 +1381,7 @@ router.post(
   }
 );
 
+// Update category
 router.put(
   "/categories/:id",
   authenticateToken,
@@ -1248,9 +1391,7 @@ router.put(
     const { category_name, description } = req.body;
 
     if (!category_name || !description) {
-      return res
-        .status(400)
-        .json({ error: "Category_Name and description are required" });
+      return res.status(400).json({ error: "Category name and description are required." });
     }
 
     try {
@@ -1263,10 +1404,7 @@ router.put(
         return res.status(404).json({ error: "Category not found" });
       }
 
-      res.status(200).json({
-        message: "Category updated successfully",
-        category: { id, category_name, description },
-      });
+      res.json({ message: "Category updated", id, category_name, description });
     } catch (error) {
       console.error("Error updating category:", error);
       res.status(500).json({ error: "Error updating category" });
@@ -1274,6 +1412,7 @@ router.put(
   }
 );
 
+// Delete category
 router.delete(
   "/categories/:id",
   authenticateToken,
@@ -1282,10 +1421,7 @@ router.delete(
     const { id } = req.params;
 
     try {
-      const [result] = await pool.execute("DELETE FROM category WHERE id = ?", [
-        id,
-      ]);
-
+      const [result] = await pool.execute("DELETE FROM category WHERE id = ?", [id]);
       if (result.affectedRows === 0) {
         return res.status(404).json({ error: "Category not found" });
       }
@@ -1293,13 +1429,203 @@ router.delete(
       res.json({ message: "Category deleted successfully" });
     } catch (error) {
       console.error("Error deleting category:", error);
-      res.status(500).json({ error: "Server error while deleting category" });
+      res.status(500).json({ error: "Error deleting category" });
+    }
+  }
+);
+
+
+// subcategory api
+
+
+// Get all subcategories for a category
+
+
+
+
+
+router.get(
+"/subcategories",
+  authenticateToken,
+  checkPermission("subcategory", "enable", "view"),
+  async (req, res) => {
+    const { categoryId } = req.params;
+    console.log("Category ID:", categoryId);
+
+    try {
+      const [rows] = await pool.execute("SELECT * FROM subcategory",[]);
+
+      res.json(rows);
+    } catch (error) {
+      console.error("Error fetching subcategories:", error);
+      res.status(500).send("Server Error");
+    }
+  }
+);
+router.get(
+  "/categories/:categoryId/subcategories",
+  authenticateToken,
+  checkPermission("subcategory", "enable", "view"),
+  async (req, res) => {
+    const { categoryId } = req.params;
+    console.log("Category ID:", categoryId);
+
+    try {
+      const [rows] = await pool.execute("SELECT * FROM subcategory WHERE category_id = ?", [categoryId]);
+
+      res.json(rows);
+    } catch (error) {
+      console.error("Error fetching subcategories:", error);
+      res.status(500).send("Server Error");
+    }
+  }
+);
+
+// Create a subcategory
+router.post(
+  "/categories/:categoryId/subcategories",
+  authenticateToken,
+  checkPermission("subcategory", "enable", "create"),
+  async (req, res) => {
+    const { categoryId } = req.params;
+    const { subcategory_name, description } = req.body;
+
+    if (!subcategory_name || !description) {
+      return res.status(400).json({ error: "Subcategory name and description are required." });
+    }
+
+    try {
+      const [result] = await pool.execute(
+        "INSERT INTO subcategory (category_id, subcategory_name, description) VALUES (?, ?, ?)",
+        [categoryId, subcategory_name, description]
+      );
+      res.status(201).json({ id: result.insertId, subcategory_name, description, category_id: categoryId });
+    } catch (error) {
+      console.error("Error creating subcategory:", error);
+      res.status(500).json({ error: "Error creating subcategory" });
+    }
+  }
+);
+
+// Update a subcategory
+router.put(
+  "/subcategories/:id",
+  authenticateToken,
+  checkPermission("subcategory", "enable", "edit"),
+  async (req, res) => {
+    const { id } = req.params;
+    const { subcategory_name, description } = req.body;
+
+    if (!subcategory_name || !description) {
+      return res.status(400).json({ error: "Subcategory name and description are required." });
+    }
+
+    try {
+      const [result] = await pool.execute(
+        "UPDATE subcategory SET subcategory_name = ?, description = ? WHERE id = ?",
+        [subcategory_name, description, id]
+      );
+
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: "Subcategory not found" });
+      }
+
+      res.json({ message: "Subcategory updated", id, subcategory_name, description });
+    } catch (error) {
+      console.error("Error updating subcategory:", error);
+      res.status(500).json({ error: "Error updating subcategory" });
+    }
+  }
+);
+
+
+router.put(
+  "/categories/:categoryId/subcategories/:id",
+  authenticateToken,
+  checkPermission("subcategory", "enable", "edit"),
+  async (req, res) => {
+    const { id } = req.params;
+    const { subcategory_name, description } = req.body;
+
+    if (!subcategory_name || !description) {
+      return res.status(400).json({ error: "Subcategory name and description are required." });
+    }
+
+    try {
+      const [result] = await pool.execute(
+        "UPDATE subcategory SET subcategory_name = ?, description = ? WHERE id = ?",
+        [subcategory_name, description, id]
+      );
+
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: "Subcategory not found" });
+      }
+
+      res.json({ message: "Subcategory updated", id, subcategory_name, description });
+    } catch (error) {
+      console.error("Error updating subcategory:", error);
+      res.status(500).json({ error: "Error updating subcategory" });
+    }
+  }
+);
+
+// Delete a subcategory
+router.delete(
+  "/subcategories/:id",
+  authenticateToken,
+  checkPermission("subcategory", "enable", "delete"),
+  async (req, res) => {
+    const { id } = req.params;
+
+    try {
+      const [result] = await pool.execute("DELETE FROM subcategory WHERE id = ?", [id]);
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: "Subcategory not found" });
+      }
+
+      res.json({ message: "Subcategory deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting subcategory:", error);
+      res.status(500).json({ error: "Error deleting subcategory" });
     }
   }
 );
 
 
 //compalints
+
+// router.get(
+//   "/complaints",
+//   authenticateToken,
+//   checkPermission("complaint_management", "enable", "view"),
+//   async (req, res) => {
+//     try {
+//       const userId = req.user.id;
+//       console.log("User ID:", userId);
+//       const role = req.user.role;
+//       console.log("User Role:", role);
+
+
+//       let query = `SELECT * FROM complaints`;
+//       let params = [];
+
+//       if (role !== "Super Admin" && role !== "Admin") {
+//         query += ` WHERE user_id = ?`;
+//         params.push(userId);
+//       }
+
+//       query += ` ORDER BY created_at DESC`;
+
+//       const [rows] = await pool.execute(query, params);
+
+//       res.status(200).json(rows);
+//     } catch (err) {
+//       console.error("Error fetching complaints:", err);
+//       res.status(500).json({ message: "Error retrieving complaints" });
+//     }
+//   }
+// );
+
 
 router.get(
   "/complaints",
@@ -1310,15 +1636,23 @@ router.get(
       const userId = req.user.id;
       const role = req.user.role;
 
-      let query = `SELECT * FROM complaints`;
-      let params = [];
+      let query = `
+        SELECT 
+          c.*, 
+          cat.category_name, 
+          sub.subcategory_name 
+        FROM complaints c
+        LEFT JOIN category cat ON c.categories = cat.id
+        LEFT JOIN subcategory sub ON c.subcategory = sub.id
+      `;
+      const params = [];
 
       if (role !== "Super Admin" && role !== "Admin") {
-        query += ` WHERE user_id = ?`;
+        query += ` WHERE c.user_id = ?`;
         params.push(userId);
       }
 
-      query += ` ORDER BY created_at DESC`;
+      query += ` ORDER BY c.created_at DESC`;
 
       const [rows] = await pool.execute(query, params);
 
@@ -1329,6 +1663,7 @@ router.get(
     }
   }
 );
+
 
 router.get(
   "/complaints/status-options",
@@ -1400,43 +1735,129 @@ router.get(
   }
 );
 
+// router.post(
+//   "/complaints",
+//   upload.single("image"),
+//   authenticateToken,
+//   checkPermission("complaint_management", "enable", "create"),
+//   async (req, res) => {
+//     const { categories,other_complaint_category, description, mobile,address} = req.body;
+//     const image = req.file ? req.file.filename : null;
+//     const userId = req.user.id;
+//     const latitude = req.body.latitude ? parseFloat(req.body.latitude) : null;
+// const longitude = req.body.longitude ? parseFloat(req.body.longitude) : null;
+
+//     try {
+//       const [insertResult] = await pool.execute(
+//         `INSERT INTO complaints 
+//           (user_id, mobile,address,categories,other_complaint_category, description, image ,status,latitude,longitude)
+//          VALUES 
+//           (?,?,?,?,?,?,?,?,?,?)`,
+//         [
+//           userId,
+//           // title,
+//           mobile || null,
+//           address,
+//           categories,
+//           other_complaint_category,
+//           description,
+//           image,
+//           "pending",
+//              latitude,
+//     longitude,
+//         ]
+//       );
+
+//       res.status(200).json({
+//         id: insertResult.insertId,
+//         user_id: userId,
+//         // title,
+//         mobile,
+//         address,
+//         categories,
+//         other_complaint_category,
+//         description,
+//         image,
+//         status: "pending",
+//          latitude,
+//   longitude,
+//         createdAt: new Date(),
+//       });
+//     } catch (err) {
+//       console.error("Error inserting complaint:", err);
+//       res.status(500).json({ message: "Error saving complaint" });
+//     }
+//   }
+// );
 router.post(
   "/complaints",
   upload.single("image"),
   authenticateToken,
   checkPermission("complaint_management", "enable", "create"),
   async (req, res) => {
-    const { title, categories, description, mobileNumber,address } = req.body;
-    const image = req.file ? req.file.filename : null;
-    const userId = req.user.id;
-
     try {
+      const {
+        categories,
+        // other_complaint_category,
+        description,
+        mobile,
+        address,
+        latitude: latRaw,
+        longitude: longRaw,
+      } = req.body;
+
+      
+
+      const image = req.file ? req.file.filename : null;
+      const userId = req.user.id;
+
+      const latitude = latRaw !== undefined && latRaw !== "" ? parseFloat(latRaw) : null;
+      const longitude = longRaw !== undefined && longRaw !== "" ? parseFloat(longRaw) : null;
+
+      const sanitize = (val) => (val === undefined || val === "" ? null : val);
+
+      // 🧠 Decide how to insert based on "other"
+      // const categoryId = categories === "other" ? null : parseInt(categories);
+      const categoryId = categories && categories !== "" ? parseInt(categories) : null;
+
+
+      const otherCategoryValue =
+        categories === "other" ? other_complaint_category?.trim() || null : null;
+
+      const params = [
+        userId,
+        sanitize(mobile),
+        sanitize(address),
+        categoryId,
+        // other_complaint_category || null,
+    
+        sanitize(description),
+        image || null,
+        "pending",
+        latitude,
+        longitude,
+      ];
+  
+
       const [insertResult] = await pool.execute(
         `INSERT INTO complaints 
-          (user_id, title, mobileNumber,address,categories, description, image ,status)
-         VALUES (?, ?, ?,?, ?, ?, ?,?)`,
-        [
-          userId,
-          title,
-          mobileNumber || null,
-          address,
-          categories,
-          description,
-          image,
-          "pending",
-        ]
+          (user_id, mobile, address, categories, description, image, status, latitude, longitude)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        params
       );
 
       res.status(200).json({
         id: insertResult.insertId,
         user_id: userId,
-        title,
-        mobileNumber,
+        mobile,
         address,
-        categories,
+        categories: categoryId,
+        // other_complaint_category: otherCategoryValue,
         description,
         image,
-        status: "open",
+        status: "pending",
+        latitude,
+        longitude,
         createdAt: new Date(),
       });
     } catch (err) {
@@ -1445,6 +1866,7 @@ router.post(
     }
   }
 );
+
 
 router.put(
   "/complaints/:id/status",
@@ -1497,5 +1919,190 @@ router.put(
     }
   }
 );
+
+router.put(
+  "/complaints/:id/assign",
+  authenticateToken,
+  checkPermission("complaint_management", "enable", "update"),
+  async (req, res) => {
+    const complaintId = req.params.id;
+    const { assignedToId } = req.body;
+    const assignedBy = req.user.id;
+
+    try {
+      // Check if the user being assigned to exists and is admin/staff
+      const [userRows] = await pool.execute(`SELECT id FROM login WHERE id = ? AND role IN ('Admin')`, [assignedToId]);
+      if (userRows.length === 0) {
+        return res.status(400).json({ message: "Invalid assignee" });
+      }
+
+      const [result] = await pool.execute(
+        `UPDATE complaints SET assigned_to = ?, assigned_by = ?, assigned_at = NOW() WHERE id = ?`,
+        [assignedToId, assignedBy, complaintId]
+      );
+
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ message: "Complaint not found" });
+      }
+
+      res.status(200).json({ message: "Complaint assigned successfully" });
+    } catch (err) {
+      console.error("Error assigning complaint:", err);
+      res.status(500).json({ message: "Failed to assign complaint" });
+    }
+  }
+);
+
+
+// router.put(
+//   "/complaints/:id/feedback",
+//   authenticateToken,
+//   checkPermission("complaint_management", "enable", "update"),
+//   async (req, res) => {
+//     const complaintId = req.params.id;
+//     const { feedback, rating } = req.body;
+
+//     if (!rating || rating < 1 || rating > 5) {
+//       return res.status(400).json({ message: "Rating must be between 1 and 5" });
+//     }
+
+//     try {
+//       const [result] = await pool.execute(
+//         `UPDATE complaints 
+//          SET feedback = ?, rating = ?, feedback_at = NOW() 
+//          WHERE id = ? AND status = 'resolved'`,
+//         [feedback, rating, complaintId]
+//       );
+
+//       if (result.affectedRows === 0) {
+//         return res.status(404).json({ message: "Complaint not found or not resolved" });
+//       }
+
+//       res.status(200).json({ message: "Feedback saved" });
+//     } catch (err) {
+//       console.error("Error saving feedback:", err);
+//       res.status(500).json({ message: "Error saving feedback" });
+//     }
+//   }
+// );
+
+
+router.put(
+  "/complaints/:id/feedback",
+  authenticateToken,
+  checkPermission("complaint_management", "enable", "update"),
+  async (req, res) => {
+    const complaintId = req.params.id;
+    const userId = req.user.id;
+    const { feedback, rating } = req.body;
+
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({ message: "Rating must be between 1 and 5" });
+    }
+
+    try {
+      // Ensure complaint exists and belongs to the current user
+      const [fetch] = await pool.execute(
+        "SELECT user_id, status FROM complaints WHERE id = ?",
+        [complaintId]
+      );
+      if (fetch.length === 0) {
+        return res.status(404).json({ message: "Complaint not found" });
+      }
+      const c = fetch[0];
+      if (c.user_id !== userId) {
+        return res.status(403).json({ message: "Not authorized to give feedback" });
+      }
+      if (c.status !== "resolved") {
+        return res.status(400).json({ message: "Can only give feedback on resolved complaints" });
+      }
+
+      const [result] = await pool.execute(
+        `UPDATE complaints
+         SET feedback = ?, rating = ?, feedback_at = NOW()
+         WHERE id = ?`,
+        [feedback, rating, complaintId]
+      );
+
+      res.status(200).json({ message: "Feedback saved" });
+    } catch (err) {
+      console.error("Error saving feedback:", err);
+      res.status(500).json({ message: "Error saving feedback" });
+    }
+  }
+);
+
+// complaint dasboard api
+
+router.get("/complaints/stats/count", authenticateToken, async (req, res) => {
+  const { period } = req.query; // 'day', 'week', 'month'
+  let groupBy = "DATE(created_at)";
+  if (period === "week") groupBy = "YEARWEEK(created_at)";
+  else if (period === "month") groupBy = "DATE_FORMAT(created_at, '%Y-%m')";
+
+  try {
+    const [rows] = await pool.execute(`
+      SELECT ${groupBy} AS period, COUNT(*) AS count
+      FROM complaints
+      GROUP BY ${groupBy}
+      ORDER BY ${groupBy}
+    `);
+    res.json(rows);
+  } catch (err) {
+    console.error("Stats error:", err);
+    res.status(500).json({ message: "Error fetching stats" });
+  }
+});
+
+
+router.get("/complaints/stats/status", authenticateToken, async (req, res) => {
+  try {
+    const [rows] = await pool.execute(`
+      SELECT status, COUNT(*) AS count
+      FROM complaints
+      GROUP BY status
+    `);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ message: "Error retrieving status stats" });
+  }
+});
+
+
+router.get("/complaints/stats/resolution-time", authenticateToken, async (req, res) => {
+  try {
+    const [rows] = await pool.execute(`
+      SELECT 
+        DATE(created_at) AS date,
+        AVG(TIMESTAMPDIFF(HOUR, created_at, feedback_at)) AS avg_hours
+      FROM complaints
+      WHERE feedback_at IS NOT NULL
+      GROUP BY DATE(created_at)
+    `);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ message: "Error calculating resolution time" });
+  }
+});
+
+
+router.get("/complaints/stats/categories", authenticateToken, async (req, res) => {
+  try {
+    const [rows] = await pool.execute(`
+      SELECT c.category_name, COUNT(*) AS count
+      FROM complaints cp
+      JOIN category c ON cp.categories = c.id
+      GROUP BY cp.categories
+      ORDER BY count DESC
+      LIMIT 5
+    `);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ message: "Error fetching category stats" });
+  }
+});
+
+
+
 
 export default router;
