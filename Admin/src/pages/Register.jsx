@@ -732,44 +732,15 @@
 // export default Register;
 
 
-
-// Register.js
-import React, { useContext, useState } from "react";
+import React, { useContext, useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 import { AuthContext } from "../context/AuthContext";
 
-const roleOptions = [
-  {
-    id: "Water",
-    label: "Water Department",
-    image: "/register/meter.png",
-    backgroundImage: "/register/water.jpg",
-    description: "Ensure seamless water supply and infrastructure maintenance.",
-    quote: "Managing urban water needs made smarter.",
-    author: "Xyz, Water Admin",
-  },
-  {
-    id: "CCMS",
-    label: "City Control Mgmt",
-    image: "/register/ccms.jpg",
-    backgroundImage: "/register/ccms.jpg",
-    description: "Monitor and control city infrastructure efficiently.",
-    quote: "Smarter cities start with smarter control systems.",
-    author: "Xyz, CCMS Admin",
-  },
-  {
-    id: "User",
-    label: "Other",
-    image: "/register/user.jpg",
-    backgroundImage: "/register/user.avif",
-    description: "Raise complaints, track issues, and stay informed.",
-    quote: "Citizen voices matter – and now they’re heard.",
-    author: "Xyz,Resident",
-  },
-];
-
 function Register() {
+  const [roleOptions, setRoleOptions] = useState([]);
+  const [loadingRoles, setLoadingRoles] = useState(true);
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -778,6 +749,23 @@ function Register() {
 
   const navigate = useNavigate();
   const { token } = useContext(AuthContext);
+
+  useEffect(() => {
+
+    axios
+      .get("http://localhost:5001/auth/public-roles", {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}, 
+      })
+      .then((res) => {
+        setRoleOptions(res.data);
+        setLoadingRoles(false);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch roles:", err);
+        setLoadingRoles(false);
+      });
+  }, [token]);
+
   const selectedRole = roleOptions.find((r) => r.id === role);
 
   const handleSubmit = (e) => {
@@ -798,6 +786,10 @@ function Register() {
         alert("Something went wrong.");
       });
   };
+
+  if (loadingRoles) {
+    return <div>Loading roles...</div>;
+  }
 
   return (
     <div
@@ -898,9 +890,7 @@ function Register() {
                   onClick={() => setRole(opt.id)}
                   style={{
                     border:
-                      role === opt.id
-                        ? "2px solid #4caf50"
-                        : "1.5px solid #ccc",
+                      role === opt.id ? "2px solid #4caf50" : "1.5px solid #ccc",
                     borderRadius: "10px",
                     padding: "0.8rem",
                     textAlign: "center",
@@ -1009,3 +999,281 @@ const buttonStyle = {
 };
 
 export default Register;
+
+
+// // Register.js
+// import React, { useContext, useState } from "react";
+// import { useNavigate, Link } from "react-router-dom";
+// import axios from "axios";
+// import { AuthContext } from "../context/AuthContext";
+
+// const roleOptions = [
+//   {
+//     id: "Water",
+//     label: "Water Department",
+//     image: "/register/meter.png",
+//     backgroundImage: "/register/water.jpg",
+//     description: "Ensure seamless water supply and infrastructure maintenance.",
+//     quote: "Managing urban water needs made smarter.",
+//     author: "Xyz, Water Admin",
+//   },
+//   {
+//     id: "CCMS",
+//     label: "City Control Mgmt",
+//     image: "/register/ccms.jpg",
+//     backgroundImage: "/register/ccms.jpg",
+//     description: "Monitor and control city infrastructure efficiently.",
+//     quote: "Smarter cities start with smarter control systems.",
+//     author: "Xyz, CCMS Admin",
+//   },
+//   {
+//     id: "User",
+//     label: "Other",
+//     image: "/register/user.jpg",
+//     backgroundImage: "/register/user.avif",
+//     description: "Raise complaints, track issues, and stay informed.",
+//     quote: "Citizen voices matter – and now they’re heard.",
+//     author: "Xyz,Resident",
+//   },
+// ];
+
+// function Register() {
+//   const [name, setName] = useState("");
+//   const [email, setEmail] = useState("");
+//   const [password, setPassword] = useState("");
+//   const [mobile, setMobile] = useState("");
+//   const [role, setRole] = useState("");
+
+//   const navigate = useNavigate();
+//   const { token } = useContext(AuthContext);
+//   const selectedRole = roleOptions.find((r) => r.id === role);
+
+//   const handleSubmit = (e) => {
+//     e.preventDefault();
+//     if (!name || !email || !password || !mobile || !role) {
+//       alert("Please fill all fields.");
+//       return;
+//     }
+//     axios
+//       .post(
+//         "http://localhost:5001/auth/register",
+//         { name, email, password, role, mobile },
+//         { headers: { Authorization: token ? `Bearer ${token}` : "" } }
+//       )
+//       .then(() => navigate("/login"))
+//       .catch((err) => {
+//         console.error(err);
+//         alert("Something went wrong.");
+//       });
+//   };
+
+//   return (
+//     <div
+//       style={{
+//         minHeight: "100vh",
+//         backgroundImage: `url(${selectedRole?.backgroundImage || "/register/default-bg.jpg"})`,
+//         backgroundSize: "cover",
+//         backgroundPosition: "center",
+//         backgroundRepeat: "no-repeat",
+//         display: "flex",
+//         justifyContent: "center",
+//         alignItems: "center",
+//         fontFamily: "sans-serif",
+//         padding: "2rem",
+//       }}
+//     >
+//       <div
+//         style={{
+//           display: "flex",
+//           backgroundColor: "rgba(255, 255, 255, 0.95)",
+//           borderRadius: "12px",
+//           boxShadow: "0 0 10px rgba(0,0,0,0.1)",
+//           overflow: "hidden",
+//           maxWidth: "960px",
+//           width: "100%",
+//         }}
+//       >
+//         {/* LEFT PANEL */}
+//         <div
+//           style={{
+//             flex: 1,
+//             backgroundImage: `url(${selectedRole?.backgroundImage || "/register/default-bg.jpg"})`,
+//             backgroundSize: "cover",
+//             backgroundPosition: "center",
+//             padding: "2rem",
+//             display: "flex",
+//             alignItems: "center",
+//             justifyContent: "center",
+//             color: "#fff",
+//           }}
+//         >
+//           <div
+//             style={{
+//               backgroundColor: "rgba(0, 0, 0, 0.6)",
+//               padding: "2rem",
+//               borderRadius: "16px",
+//               maxWidth: "360px",
+//               textAlign: "left",
+//             }}
+//           >
+//             <h2 style={{ fontSize: "1.8rem", marginBottom: "1rem" }}>
+//               {selectedRole ? selectedRole.label : "Welcome!"}
+//             </h2>
+//             <p style={{ fontStyle: "italic", marginBottom: "1rem" }}>
+//               “{selectedRole?.quote || "Select a role to see relevant details."}”
+//             </p>
+//             {selectedRole && (
+//               <p style={{ fontWeight: "bold", color: "#cfcfcf" }}>
+//                 {selectedRole.author}
+//               </p>
+//             )}
+//           </div>
+//         </div>
+
+//         {/* RIGHT PANEL */}
+//         <div
+//           style={{
+//             flex: 1,
+//             padding: "3rem",
+//             display: "flex",
+//             flexDirection: "column",
+//             justifyContent: "center",
+//           }}
+//         >
+//           <div style={{ maxWidth: "400px", margin: "0 auto", width: "100%" }}>
+//             <h2
+//               style={{
+//                 textAlign: "center",
+//                 marginBottom: "2rem",
+//                 color: "#333",
+//               }}
+//             >
+//               Register an Account
+//             </h2>
+
+//             {/* Role Select */}
+//             <div
+//               style={{
+//                 display: "flex",
+//                 justifyContent: "center",
+//                 gap: "1rem",
+//                 marginBottom: "2rem",
+//               }}
+//             >
+//               {roleOptions.map((opt) => (
+//                 <div
+//                   key={opt.id}
+//                   onClick={() => setRole(opt.id)}
+//                   style={{
+//                     border:
+//                       role === opt.id
+//                         ? "2px solid #4caf50"
+//                         : "1.5px solid #ccc",
+//                     borderRadius: "10px",
+//                     padding: "0.8rem",
+//                     textAlign: "center",
+//                     cursor: "pointer",
+//                     background: role === opt.id ? "#f1fff6" : "#fafafa",
+//                     width: "80px",
+//                   }}
+//                 >
+//                   <img
+//                     src={opt.image}
+//                     alt={opt.label}
+//                     style={{ width: "40px", marginBottom: "0.5rem" }}
+//                   />
+//                   <div style={{ fontWeight: "500", fontSize: "0.9rem" }}>
+//                     {opt.id}
+//                   </div>
+//                 </div>
+//               ))}
+//             </div>
+
+//             {/* Form */}
+//             <form onSubmit={handleSubmit}>
+//               <input
+//                 type="text"
+//                 placeholder="Full Name"
+//                 value={name}
+//                 onChange={(e) => setName(e.target.value)}
+//                 required
+//                 style={inputStyle}
+//               />
+//               <input
+//                 type="email"
+//                 placeholder="Email"
+//                 value={email}
+//                 onChange={(e) => setEmail(e.target.value)}
+//                 required
+//                 style={inputStyle}
+//               />
+//               <input
+//                 type="password"
+//                 placeholder="Password"
+//                 value={password}
+//                 onChange={(e) => setPassword(e.target.value)}
+//                 required
+//                 style={inputStyle}
+//               />
+//               <input
+//                 type="tel"
+//                 placeholder="Mobile Number"
+//                 value={mobile}
+//                 onChange={(e) => setMobile(e.target.value)}
+//                 required
+//                 style={inputStyle}
+//               />
+
+//               <button
+//                 type="submit"
+//                 disabled={!role}
+//                 style={{
+//                   ...buttonStyle,
+//                   backgroundColor: role ? "#4caf50" : "#ccc",
+//                   cursor: role ? "pointer" : "not-allowed",
+//                 }}
+//               >
+//                 Register
+//               </button>
+//             </form>
+
+//             <p
+//               style={{
+//                 textAlign: "center",
+//                 marginTop: "1.5rem",
+//                 color: "#666",
+//               }}
+//             >
+//               Already have an account?{" "}
+//               <Link to="/login" style={{ color: "#4caf50", fontWeight: 500 }}>
+//                 Sign In
+//               </Link>
+//             </p>
+//           </div>
+//         </div>
+//       </div>
+//     </div>
+//   );
+// }
+
+// const inputStyle = {
+//   width: "100%",
+//   padding: "12px",
+//   marginBottom: "1rem",
+//   borderRadius: "8px",
+//   border: "1.5px solid #ccc",
+//   fontSize: "1rem",
+//   outline: "none",
+// };
+
+// const buttonStyle = {
+//   width: "100%",
+//   padding: "12px",
+//   color: "#fff",
+//   border: "none",
+//   borderRadius: "8px",
+//   fontSize: "1rem",
+//   transition: "all 0.2s ease",
+// };
+
+// export default Register;

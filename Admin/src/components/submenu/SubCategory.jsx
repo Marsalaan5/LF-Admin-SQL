@@ -1430,20 +1430,35 @@ function SubCategory() {
       const cats = await catRes.json();
       setCategories(cats);
 
-      const subcatPromises = cats.map((cat) =>
-        fetch(`http://localhost:5001/auth/categories/${cat.id}/subcategories`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }).then((res) => res.json())
-      );
+    //   const subcatPromises = cats.map((cat) =>
+    //     fetch(`http://localhost:5001/auth/categories/${cat.id}/subcategories`, {
+    //       headers: { Authorization: `Bearer ${token}` },
+    //     }).then((res) => res.json())
+    //   );
 
-      const allSubs = await Promise.all(subcatPromises);
-      const subByCat = {};
-      cats.forEach((cat, i) => {
-        subByCat[cat.id] = allSubs[i];
-      });
+    //   const allSubs = await Promise.all(subcatPromises);
+    //   const subByCat = {};
+    //   cats.forEach((cat, i) => {
+    //     subByCat[cat.id] = allSubs[i];
+    //   });
 
-      setSubcategoriesByCategory(subByCat);
-    } catch (err) {
+    //   setSubcategoriesByCategory(subByCat);
+    // }
+    const subRes = await fetch("http://localhost:5001/auth/subcategories", {
+  headers: { Authorization: `Bearer ${token}` },
+});
+const allSubcategories = await subRes.json();
+
+const subByCat = {};
+for (const sub of allSubcategories) {
+  const catId = sub.category_id;
+  if (!subByCat[catId]) subByCat[catId] = [];
+  subByCat[catId].push(sub);
+}
+setSubcategoriesByCategory(subByCat);
+    }
+    
+    catch (err) {
       console.error("Error fetching data:", err);
       alert("Failed to fetch categories/subcategories.");
     }

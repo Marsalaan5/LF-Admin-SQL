@@ -32,6 +32,7 @@ import ForgotPassword from "./pages/ForgotPassword.jsx";
 import ResetPassword from "./pages/ResetPassword.jsx";
 import Category from "./components/submenu/Category.jsx";
 import SubCategory from "./components/submenu/SubCategory.jsx";
+import TrackComplaint from "./pages/TrackComplaint.jsx";
 // import Ccms from "./components/submenu/Ccms.jsx";
 // import Water from "./components/submenu/Water.jsx";
 // import ChatBotFlow from "./chatbot/ChatBotFlow.jsx";
@@ -105,6 +106,14 @@ function App() {
               element={
                 <AuthLayout>
                   <SubCategory />
+                </AuthLayout>
+              }
+            />
+            <Route
+              path="/track-complaints"
+              element={
+                <AuthLayout>
+                  <TrackComplaint />
                 </AuthLayout>
               }
             />

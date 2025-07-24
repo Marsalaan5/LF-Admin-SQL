@@ -16,6 +16,10 @@ import XLSX from "xlsx";
 import { fileURLToPath } from "url";
 import Joi from "joi";
 import nodemailer from "nodemailer";
+import getAllowedRegistrationRoles from "../services/roleServices.js";
+import Handlebars from "handlebars";
+import { transporter,renderTemplate,sendComplaintEmail } from "../mail/mailer.js"; 
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -55,37 +59,14 @@ const upload = multer({
   },
 });
 
-
-// function organizeMenu(menuItems) {
-//   const organizedMenu = [];
-//   const map = {};
-
-//   menuItems.forEach((item) => {
-//     map[item.id] = { ...item, children: [] };
-//   });
-
-//   menuItems.forEach((item) => {
-//     if (item.parent_id === null) {
-//       organizedMenu.push(map[item.id]);
-//     } else {
-//       if (map[item.parent_id]) {
-//         map[item.parent_id].children.push(map[item.id]);
-//       }
-//     }
-//   });
-
-//   return organizedMenu;
-// }
-
 function organizeMenu(menuItems, parentId = null) {
   return menuItems
-    .filter(item => item.parent_id === parentId)
-    .map(item => ({
+    .filter((item) => item.parent_id === parentId)
+    .map((item) => ({
       ...item,
-      children: organizeMenu(menuItems, item.id)
+      children: organizeMenu(menuItems, item.id),
     }));
 }
-
 
 const logAudit = async (
   // adminId,
@@ -125,9 +106,11 @@ const registerSchema = Joi.object({
     .max(128)
     .pattern(new RegExp("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).+"))
     .required(),
-     mobile: Joi.string().pattern(/^\d{10}$/).optional(),
+  mobile: Joi.string()
+    .pattern(/^\d{10}$/)
+    .optional(),
   role: Joi.string()
-    .valid("user", "admin", "super admin", "viewer","Water","CCMS")
+    .valid("user", "admin", "super admin", "viewer", "Water", "CCMS")
     .insensitive()
     .required()
     .default("user"),
@@ -213,10 +196,12 @@ router.get("/modules", (req, res) => {
 //   }
 // });
 
+//main register.js
+
 router.post(
   "/register",
   // authenticateToken,
-  upload.single("image"), // upload first
+  upload.single("image"),
   async (req, res) => {
     // Image validation
     if (req.fileValidationError) {
@@ -229,7 +214,14 @@ router.post(
       return res.status(400).json({ message: error.details[0].message });
     }
 
-    const { name, email, password,mobile, role = "user", status = "active" } = value;
+    const {
+      name,
+      email,
+      password,
+      mobile,
+      role = "user",
+      status = "active",
+    } = value;
     const image = req.file ? req.file.path : null;
     // const token = req.headers.authorization?.split(" ")[1];
 
@@ -260,7 +252,7 @@ router.post(
       // Insert user
       const [result] = await pool.execute(
         "INSERT INTO login (name, email, password,mobile, role_id, role, image, insert_time, status) VALUES (?, ?,?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)",
-        [name, email, hashedPassword,mobile, roleId, role, image, status]
+        [name, email, hashedPassword, mobile, roleId, role, image, status]
       );
 
       io.emit("new-signup", { name, email });
@@ -289,6 +281,36 @@ router.post(
     }
   }
 );
+
+router.get("/public-roles", (req, res) => {
+  const publicRoles = [
+    {
+      id: "Water",
+      label: "Water Department",
+      image: "/register/meter.png",
+      backgroundImage: "/register/water.jpg",
+      quote: "Managing urban water needs made smarter.",
+      author: "Xyz, Water Admin",
+    },
+    {
+      id: "CCMS",
+      label: "City Control Mgmt",
+      image: "/register/ccms.jpg",
+      backgroundImage: "/register/ccms.jpg",
+      quote: "Smarter cities start with smarter control systems.",
+      author: "Xyz, CCMS Admin",
+    },
+    {
+      id: "User",
+      label: "User",
+      image: "/register/user.jpg",
+      backgroundImage: "/register/user.avif",
+      quote: "Citizen voices matter – and now they’re heard.",
+      author: "Xyz, Resident",
+    },
+  ];
+  res.json(publicRoles);
+});
 
 // router.post("/login", async (req, res) => {
 //   const { email, password } = req.body;
@@ -375,7 +397,6 @@ router.post(
 //   }
 // });
 
-
 router.post("/login", async (req, res) => {
   const { email, password, role } = req.body; // accept role from client
 
@@ -400,36 +421,39 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
-
     // if (role !== user.role) {
     //   return res.status(403).json({ message: "Incorrect role selected" });
     // }
 
     // Only check role if it's provided and not "Other"
-// if (role && role !== "Other" && role !== user.role) {
-//   return res.status(403).json({ message: "Incorrect role selected" });
-// }
+    // if (role && role !== "Other" && role !== user.role) {
+    //   return res.status(403).json({ message: "Incorrect role selected" });
+    // }
 
-// If user role is Water or CCMS
-if (user.role === "Water" || user.role === "CCMS") {
-  // Then role from client must exactly match user.role
-  if (role !== user.role) {
-    return res.status(403).json({ message: "Incorrect role selected" });
-  }
-} else {
-  // For other user roles:
-  // role can be "Other" or null or match user.role
-  if (role && role !== "Other" && role !== user.role) {
-    return res.status(403).json({ message: "Incorrect role selected" });
-  }
-}
-
-
+    // If user role is Water or CCMS
+    if (user.role === "Water" || user.role === "CCMS") {
+      // Then role from client must exactly match user.role
+      if (role !== user.role) {
+        return res.status(403).json({ message: "Incorrect role selected" });
+      }
+    } else {
+      // For other user roles:
+      // role can be "Other" or null or match user.role
+      if (role && role !== "Other" && role !== user.role) {
+        return res.status(403).json({ message: "Incorrect role selected" });
+      }
+    }
 
     const roleId = user.role_id;
 
     const token = jwt.sign(
-      { id: user.id, email: user.email, mobile: user.mobile, role: user.role, role_id: roleId },
+      {
+        id: user.id,
+        email: user.email,
+        mobile: user.mobile,
+        role: user.role,
+        role_id: roleId,
+      },
       process.env.JWT_SECRET,
       { expiresIn: "1d" }
     );
@@ -482,7 +506,6 @@ if (user.role === "Water" || user.role === "CCMS") {
   }
 });
 
-
 //  password reset link
 router.post("/forgot-password", async (req, res) => {
   try {
@@ -504,13 +527,6 @@ router.post("/forgot-password", async (req, res) => {
 
     const resetLink = `http://localhost:5173/reset-password/${token}`;
 
-    const transporter = nodemailer.createTransport({
-      service: "Gmail",
-      auth: {
-        user: process.env.EMAIL_ID,
-        pass: process.env.EMAIL_PASSWORD,
-      },
-    });
 
     await transporter.sendMail({
       to: email,
@@ -662,8 +678,6 @@ router.put("/profile", authenticateToken, async (req, res) => {
   }
 });
 
-
-
 //dashboard route
 
 router.get(
@@ -771,7 +785,8 @@ router.put(
   checkPermission("user_management", "enable", "edit"),
   async (req, res) => {
     const { id } = req.params;
-    const { name, email, password,mobile, role_id, role, image, status } = req.body;
+    const { name, email, password, mobile, role_id, role, image, status } =
+      req.body;
     console.log("Received data for update:", {
       name,
       email,
@@ -1169,7 +1184,6 @@ router.delete(
   }
 );
 
-
 // menu route
 
 router.get(
@@ -1314,9 +1328,6 @@ router.patch("/menu/:id/status", async (req, res) => {
 //   }
 // );
 
-
-
-
 //category api
 
 // Get all categories
@@ -1335,7 +1346,6 @@ router.get(
   }
 );
 
-
 router.get(
   "/categories/:categoryId",
   authenticateToken,
@@ -1343,7 +1353,9 @@ router.get(
   async (req, res) => {
     const { categoryId } = req.params;
     try {
-      const [rows] = await pool.execute("SELECT * FROM category WHERE id = ?", [categoryId]);
+      const [rows] = await pool.execute("SELECT * FROM category WHERE id = ?", [
+        categoryId,
+      ]);
       if (rows.length === 0) {
         return res.status(404).json({ error: "Category not found" });
       }
@@ -1355,7 +1367,6 @@ router.get(
   }
 );
 
-
 // Create category
 router.post(
   "/categories",
@@ -1365,7 +1376,9 @@ router.post(
     const { category_name, description } = req.body;
 
     if (!category_name || !description) {
-      return res.status(400).json({ error: "Category name and description are required." });
+      return res
+        .status(400)
+        .json({ error: "Category name and description are required." });
     }
 
     try {
@@ -1391,7 +1404,9 @@ router.put(
     const { category_name, description } = req.body;
 
     if (!category_name || !description) {
-      return res.status(400).json({ error: "Category name and description are required." });
+      return res
+        .status(400)
+        .json({ error: "Category name and description are required." });
     }
 
     try {
@@ -1421,7 +1436,9 @@ router.delete(
     const { id } = req.params;
 
     try {
-      const [result] = await pool.execute("DELETE FROM category WHERE id = ?", [id]);
+      const [result] = await pool.execute("DELETE FROM category WHERE id = ?", [
+        id,
+      ]);
       if (result.affectedRows === 0) {
         return res.status(404).json({ error: "Category not found" });
       }
@@ -1434,18 +1451,10 @@ router.delete(
   }
 );
 
-
 // subcategory api
 
-
-// Get all subcategories for a category
-
-
-
-
-
 router.get(
-"/subcategories",
+  "/subcategories",
   authenticateToken,
   checkPermission("subcategory", "enable", "view"),
   async (req, res) => {
@@ -1453,7 +1462,7 @@ router.get(
     console.log("Category ID:", categoryId);
 
     try {
-      const [rows] = await pool.execute("SELECT * FROM subcategory",[]);
+      const [rows] = await pool.execute("SELECT * FROM subcategory", []);
 
       res.json(rows);
     } catch (error) {
@@ -1462,6 +1471,7 @@ router.get(
     }
   }
 );
+
 router.get(
   "/categories/:categoryId/subcategories",
   authenticateToken,
@@ -1471,7 +1481,10 @@ router.get(
     console.log("Category ID:", categoryId);
 
     try {
-      const [rows] = await pool.execute("SELECT * FROM subcategory WHERE category_id = ?", [categoryId]);
+      const [rows] = await pool.execute(
+        "SELECT * FROM subcategory WHERE category_id = ?",
+        [categoryId]
+      );
 
       res.json(rows);
     } catch (error) {
@@ -1491,7 +1504,9 @@ router.post(
     const { subcategory_name, description } = req.body;
 
     if (!subcategory_name || !description) {
-      return res.status(400).json({ error: "Subcategory name and description are required." });
+      return res
+        .status(400)
+        .json({ error: "Subcategory name and description are required." });
     }
 
     try {
@@ -1499,7 +1514,14 @@ router.post(
         "INSERT INTO subcategory (category_id, subcategory_name, description) VALUES (?, ?, ?)",
         [categoryId, subcategory_name, description]
       );
-      res.status(201).json({ id: result.insertId, subcategory_name, description, category_id: categoryId });
+      res
+        .status(201)
+        .json({
+          id: result.insertId,
+          subcategory_name,
+          description,
+          category_id: categoryId,
+        });
     } catch (error) {
       console.error("Error creating subcategory:", error);
       res.status(500).json({ error: "Error creating subcategory" });
@@ -1517,7 +1539,9 @@ router.put(
     const { subcategory_name, description } = req.body;
 
     if (!subcategory_name || !description) {
-      return res.status(400).json({ error: "Subcategory name and description are required." });
+      return res
+        .status(400)
+        .json({ error: "Subcategory name and description are required." });
     }
 
     try {
@@ -1530,14 +1554,18 @@ router.put(
         return res.status(404).json({ error: "Subcategory not found" });
       }
 
-      res.json({ message: "Subcategory updated", id, subcategory_name, description });
+      res.json({
+        message: "Subcategory updated",
+        id,
+        subcategory_name,
+        description,
+      });
     } catch (error) {
       console.error("Error updating subcategory:", error);
       res.status(500).json({ error: "Error updating subcategory" });
     }
   }
 );
-
 
 router.put(
   "/categories/:categoryId/subcategories/:id",
@@ -1548,7 +1576,9 @@ router.put(
     const { subcategory_name, description } = req.body;
 
     if (!subcategory_name || !description) {
-      return res.status(400).json({ error: "Subcategory name and description are required." });
+      return res
+        .status(400)
+        .json({ error: "Subcategory name and description are required." });
     }
 
     try {
@@ -1561,7 +1591,12 @@ router.put(
         return res.status(404).json({ error: "Subcategory not found" });
       }
 
-      res.json({ message: "Subcategory updated", id, subcategory_name, description });
+      res.json({
+        message: "Subcategory updated",
+        id,
+        subcategory_name,
+        description,
+      });
     } catch (error) {
       console.error("Error updating subcategory:", error);
       res.status(500).json({ error: "Error updating subcategory" });
@@ -1578,7 +1613,10 @@ router.delete(
     const { id } = req.params;
 
     try {
-      const [result] = await pool.execute("DELETE FROM subcategory WHERE id = ?", [id]);
+      const [result] = await pool.execute(
+        "DELETE FROM subcategory WHERE id = ?",
+        [id]
+      );
       if (result.affectedRows === 0) {
         return res.status(404).json({ error: "Subcategory not found" });
       }
@@ -1590,7 +1628,6 @@ router.delete(
     }
   }
 );
-
 
 //compalints
 
@@ -1604,7 +1641,6 @@ router.delete(
 //       console.log("User ID:", userId);
 //       const role = req.user.role;
 //       console.log("User Role:", role);
-
 
 //       let query = `SELECT * FROM complaints`;
 //       let params = [];
@@ -1626,7 +1662,6 @@ router.delete(
 //   }
 // );
 
-
 router.get(
   "/complaints",
   authenticateToken,
@@ -1643,8 +1678,7 @@ router.get(
           sub.subcategory_name 
         FROM complaints c
         LEFT JOIN category cat ON c.categories = cat.id
-        LEFT JOIN subcategory sub ON c.subcategory = sub.id
-      `;
+        LEFT JOIN subcategory sub ON c.subcategory = sub.id`;
       const params = [];
 
       if (role !== "Super Admin" && role !== "Admin") {
@@ -1663,7 +1697,6 @@ router.get(
     }
   }
 );
-
 
 router.get(
   "/complaints/status-options",
@@ -1741,46 +1774,106 @@ router.get(
 //   authenticateToken,
 //   checkPermission("complaint_management", "enable", "create"),
 //   async (req, res) => {
-//     const { categories,other_complaint_category, description, mobile,address} = req.body;
-//     const image = req.file ? req.file.filename : null;
-//     const userId = req.user.id;
-//     const latitude = req.body.latitude ? parseFloat(req.body.latitude) : null;
-// const longitude = req.body.longitude ? parseFloat(req.body.longitude) : null;
-
 //     try {
+//       const {
+//         categories,
+//         subcategory,
+//         description,
+//         mobile,
+//         address,
+//         latitude: latRaw,
+//         longitude: longRaw,
+//       } = req.body;
+
+//       const image = req.file ? req.file.filename : null;
+//       const userId = req.user.id;
+
+//       const latitude =
+//         latRaw !== undefined && latRaw !== "" ? parseFloat(latRaw) : null;
+//       const longitude =
+//         longRaw !== undefined && longRaw !== "" ? parseFloat(longRaw) : null;
+
+//       const sanitize = (val) => (val === undefined || val === "" ? null : val);
+
+//       const categoryId =
+//         categories && categories !== "" ? parseInt(categories) : null;
+//       const subcategoryId =
+//         subcategory && subcategory !== "" ? parseInt(subcategory) : null;
+
+//       // Validate category exists
+//       const [categoryRows] = await pool.execute(
+//         "SELECT id FROM category WHERE id = ?",
+//         [categoryId]
+//       );
+//       if (categoryRows.length === 0) {
+//         return res.status(400).json({ message: "Invalid category selected." });
+//       }
+
+//       // Check if the category has any subcategories
+//       const [subRows] = await pool.execute(
+//         "SELECT id FROM subcategory WHERE category_id = ?",
+//         [categoryId]
+//       );
+
+//       // If subcategories exist for this category, subcategory is required
+//       if (subRows.length > 0 && !subcategoryId) {
+//         return res
+//           .status(400)
+//           .json({
+//             message: "Subcategory is required for the selected category.",
+//           });
+//       }
+
+//       if (subcategoryId) {
+//         const [validSub] = await pool.execute(
+//           "SELECT id FROM subcategory WHERE id = ? AND category_id = ?",
+//           [subcategoryId, categoryId]
+//         );
+
+//         if (validSub.length === 0) {
+//           return res
+//             .status(400)
+//             .json({ message: "Invalid subcategory for selected category." });
+//         }
+//       }
+
+//       // Handle "other" category if needed (commented out)
+//       // const otherCategoryValue =
+//       //   categories === "other" ? other_complaint_category?.trim() || null : null;
+
+//       const params = [
+//         userId,
+//         sanitize(mobile),
+//         sanitize(address),
+//         categoryId,
+//         subcategoryId,
+//         sanitize(description),
+//         image || null,
+//         "pending",
+//         latitude,
+//         longitude,
+//       ];
+
 //       const [insertResult] = await pool.execute(
 //         `INSERT INTO complaints 
-//           (user_id, mobile,address,categories,other_complaint_category, description, image ,status,latitude,longitude)
-//          VALUES 
-//           (?,?,?,?,?,?,?,?,?,?)`,
-//         [
-//           userId,
-//           // title,
-//           mobile || null,
-//           address,
-//           categories,
-//           other_complaint_category,
-//           description,
-//           image,
-//           "pending",
-//              latitude,
-//     longitude,
-//         ]
+//           (user_id, mobile, address, categories, subcategory, description, image, status, latitude, longitude)
+//          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+//         params
 //       );
 
 //       res.status(200).json({
 //         id: insertResult.insertId,
 //         user_id: userId,
-//         // title,
 //         mobile,
 //         address,
-//         categories,
-//         other_complaint_category,
+//         categories: categoryId,
+//         subcategory: subcategoryId,
+
 //         description,
 //         image,
 //         status: "pending",
-//          latitude,
-//   longitude,
+//         latitude,
+//         longitude,
 //         createdAt: new Date(),
 //       });
 //     } catch (err) {
@@ -1789,6 +1882,9 @@ router.get(
 //     }
 //   }
 // );
+
+
+
 router.post(
   "/complaints",
   upload.single("image"),
@@ -1798,7 +1894,7 @@ router.post(
     try {
       const {
         categories,
-        // other_complaint_category,
+        subcategory,
         description,
         mobile,
         address,
@@ -1806,53 +1902,157 @@ router.post(
         longitude: longRaw,
       } = req.body;
 
-      
-
       const image = req.file ? req.file.filename : null;
       const userId = req.user.id;
 
-      const latitude = latRaw !== undefined && latRaw !== "" ? parseFloat(latRaw) : null;
-      const longitude = longRaw !== undefined && longRaw !== "" ? parseFloat(longRaw) : null;
+
+      // Fetch full user details including name
+const [userRows] = await pool.execute(
+  "SELECT name, email FROM login WHERE id = ?",
+  [userId]
+);
+
+if (userRows.length === 0) {
+  return res.status(404).json({ message: "User not found." });
+}
+
+
+const user = {
+  name: userRows[0].name,
+  email: userRows[0].email,
+};
+
+
+
+
+      const latitude =
+        latRaw !== undefined && latRaw !== "" ? parseFloat(latRaw) : null;
+      const longitude =
+        longRaw !== undefined && longRaw !== "" ? parseFloat(longRaw) : null;
 
       const sanitize = (val) => (val === undefined || val === "" ? null : val);
 
-      // 🧠 Decide how to insert based on "other"
-      // const categoryId = categories === "other" ? null : parseInt(categories);
-      const categoryId = categories && categories !== "" ? parseInt(categories) : null;
+      const categoryId =
+        categories && categories !== "" ? parseInt(categories) : null;
+      const subcategoryId =
+        subcategory && subcategory !== "" ? parseInt(subcategory) : null;
 
+   
+      const [categoryRows] = await pool.execute(
+        "SELECT id, category_name FROM category WHERE id = ?",
+        [categoryId]
+      );
+      if (categoryRows.length === 0) {
+        return res.status(400).json({ message: "Invalid category selected." });
+      }
+      const categoryName = categoryRows[0].category_name;
 
-      const otherCategoryValue =
-        categories === "other" ? other_complaint_category?.trim() || null : null;
+    
+      const [subRows] = await pool.execute(
+        "SELECT id FROM subcategory WHERE category_id = ?",
+        [categoryId]
+      );
 
+     
+      if (subRows.length > 0 && !subcategoryId) {
+        return res
+          .status(400)
+          .json({
+            message: "Subcategory is required for the selected category.",
+          });
+      }
+
+      if (subcategoryId) {
+        const [validSub] = await pool.execute(
+          "SELECT id FROM subcategory WHERE id = ? AND category_id = ?",
+          [subcategoryId, categoryId]
+        );
+
+        if (validSub.length === 0) {
+          return res
+            .status(400)
+            .json({ message: "Invalid subcategory for selected category." });
+        }
+      }
+
+      // Prepare the database parameters
       const params = [
         userId,
         sanitize(mobile),
         sanitize(address),
         categoryId,
-        // other_complaint_category || null,
-    
+        subcategoryId,
         sanitize(description),
         image || null,
         "pending",
         latitude,
         longitude,
       ];
-  
 
       const [insertResult] = await pool.execute(
         `INSERT INTO complaints 
-          (user_id, mobile, address, categories, description, image, status, latitude, longitude)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          (user_id, mobile, address, categories, subcategory, description, image, status, latitude, longitude)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         params
       );
 
+      const complaintId = insertResult.insertId;
+
+// console.log("req.user:", req.user);
+
+      // const user = { name: req.user.name, email: req.user.email };
+      
+        let templateName;
+      let subject;
+
+      switch (categoryName.toLowerCase()) {
+        case "water":
+          templateName = "complaintWater";
+          subject = `Water Complaint Registered - Ticket #${complaintId}`;
+          break;
+        case "ccms":
+          templateName = "complaintCCMS";
+          subject = `Complaint Registered - Ticket #${complaintId}`;
+          break;
+        default:
+          templateName = "complaintOther";
+          subject = `Your Complaint Has Been Registered - Ticket #${complaintId}`;
+      }
+
+
+
+const emailHtml = renderTemplate(templateName, {
+  userName: user.name,
+  ticketId: complaintId,
+  categoryName: categoryName,
+  description: description,
+});
+
+console.log("Render template data:", {
+  userName: user.name,
+  ticketId: complaintId,
+  categoryName: categoryName,
+  description: description,
+});
+
+
+   
+      await transporter.sendMail({
+        from: '"Support Team" <test.water00@gmail.com>',
+        to: user.email, 
+        subject: `Your Complaint Has Been Registered - Ticket #${complaintId}`,
+        html: emailHtml,
+      });
+
+      
+
       res.status(200).json({
-        id: insertResult.insertId,
+        id: complaintId,
         user_id: userId,
         mobile,
         address,
         categories: categoryId,
-        // other_complaint_category: otherCategoryValue,
+        subcategory: subcategoryId,
         description,
         image,
         status: "pending",
@@ -1866,6 +2066,77 @@ router.post(
     }
   }
 );
+
+// router.get("/complaints/:id", async (req, res) => {
+//   const complaintId = parseInt(req.params.id, 10);
+
+//   if (isNaN(complaintId)) {
+//     return res.status(400).json({ message: "Invalid complaint ID" });
+//   }
+
+//   try {
+//     const [rows] = await pool.execute(
+//       `SELECT c.*, cat.category_name, sub.subcategory_name, u.name as user_name 
+//        FROM complaints c
+//        LEFT JOIN category cat ON c.categories = cat.id
+//        LEFT JOIN subcategory sub ON c.subcategory = sub.id
+//        LEFT JOIN users u ON c.user_id = u.id
+//        WHERE c.id = ?`,
+//       [complaintId]
+//     );
+
+//     if (rows.length === 0) {
+//       return res.status(404).json({ message: "Complaint not found" });
+//     }
+
+//     res.status(200).json(rows[0]);
+//   } catch (err) {
+//     console.error("Error fetching complaint:", err);
+//     res.status(500).json({ message: "Internal server error" });
+//   }
+// });
+
+
+
+// Route: GET /auth/complaints/:id
+
+router.get("/auth/complaints/:id", async (req, res) => {
+  const complaintId = req.params.id;
+
+  try {
+    const [rows] = await pool.execute(
+      `SELECT 
+        c.id,
+        c.description,
+        c.status,
+        c.latitude,
+        c.longitude,
+        c.mobile,
+        c.address,
+        u.name AS user_name,
+        a.name AS assigned_to_name,
+        cat.category_name,
+        sub.subcategory_name
+      FROM complaints c
+      LEFT JOIN login u ON u.id = c.user_id          
+      LEFT JOIN login a ON a.id = c.assigned_to 
+      LEFT JOIN category cat ON cat.id = c.categories
+      LEFT JOIN subcategory sub ON sub.id = c.subcategory
+      WHERE c.id = ?`,
+      [complaintId]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "Complaint not found" });
+    }
+
+    res.json(rows[0]);
+  } catch (err) {
+    console.error("Error fetching complaint:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 
 
 router.put(
@@ -1931,7 +2202,10 @@ router.put(
 
     try {
       // Check if the user being assigned to exists and is admin/staff
-      const [userRows] = await pool.execute(`SELECT id FROM login WHERE id = ? AND role IN ('Admin')`, [assignedToId]);
+      const [userRows] = await pool.execute(
+        `SELECT id FROM login WHERE id = ? AND role IN ('Admin')`,
+        [assignedToId]
+      );
       if (userRows.length === 0) {
         return res.status(400).json({ message: "Invalid assignee" });
       }
@@ -1953,7 +2227,6 @@ router.put(
   }
 );
 
-
 // router.put(
 //   "/complaints/:id/feedback",
 //   authenticateToken,
@@ -1968,8 +2241,8 @@ router.put(
 
 //     try {
 //       const [result] = await pool.execute(
-//         `UPDATE complaints 
-//          SET feedback = ?, rating = ?, feedback_at = NOW() 
+//         `UPDATE complaints
+//          SET feedback = ?, rating = ?, feedback_at = NOW()
 //          WHERE id = ? AND status = 'resolved'`,
 //         [feedback, rating, complaintId]
 //       );
@@ -1986,7 +2259,6 @@ router.put(
 //   }
 // );
 
-
 router.put(
   "/complaints/:id/feedback",
   authenticateToken,
@@ -1997,7 +2269,9 @@ router.put(
     const { feedback, rating } = req.body;
 
     if (!rating || rating < 1 || rating > 5) {
-      return res.status(400).json({ message: "Rating must be between 1 and 5" });
+      return res
+        .status(400)
+        .json({ message: "Rating must be between 1 and 5" });
     }
 
     try {
@@ -2011,10 +2285,14 @@ router.put(
       }
       const c = fetch[0];
       if (c.user_id !== userId) {
-        return res.status(403).json({ message: "Not authorized to give feedback" });
+        return res
+          .status(403)
+          .json({ message: "Not authorized to give feedback" });
       }
       if (c.status !== "resolved") {
-        return res.status(400).json({ message: "Can only give feedback on resolved complaints" });
+        return res
+          .status(400)
+          .json({ message: "Can only give feedback on resolved complaints" });
       }
 
       const [result] = await pool.execute(
@@ -2054,7 +2332,6 @@ router.get("/complaints/stats/count", authenticateToken, async (req, res) => {
   }
 });
 
-
 router.get("/complaints/stats/status", authenticateToken, async (req, res) => {
   try {
     const [rows] = await pool.execute(`
@@ -2068,10 +2345,12 @@ router.get("/complaints/stats/status", authenticateToken, async (req, res) => {
   }
 });
 
-
-router.get("/complaints/stats/resolution-time", authenticateToken, async (req, res) => {
-  try {
-    const [rows] = await pool.execute(`
+router.get(
+  "/complaints/stats/resolution-time",
+  authenticateToken,
+  async (req, res) => {
+    try {
+      const [rows] = await pool.execute(`
       SELECT 
         DATE(created_at) AS date,
         AVG(TIMESTAMPDIFF(HOUR, created_at, feedback_at)) AS avg_hours
@@ -2079,16 +2358,19 @@ router.get("/complaints/stats/resolution-time", authenticateToken, async (req, r
       WHERE feedback_at IS NOT NULL
       GROUP BY DATE(created_at)
     `);
-    res.json(rows);
-  } catch (err) {
-    res.status(500).json({ message: "Error calculating resolution time" });
+      res.json(rows);
+    } catch (err) {
+      res.status(500).json({ message: "Error calculating resolution time" });
+    }
   }
-});
+);
 
-
-router.get("/complaints/stats/categories", authenticateToken, async (req, res) => {
-  try {
-    const [rows] = await pool.execute(`
+router.get(
+  "/complaints/stats/categories",
+  authenticateToken,
+  async (req, res) => {
+    try {
+      const [rows] = await pool.execute(`
       SELECT c.category_name, COUNT(*) AS count
       FROM complaints cp
       JOIN category c ON cp.categories = c.id
@@ -2096,13 +2378,11 @@ router.get("/complaints/stats/categories", authenticateToken, async (req, res) =
       ORDER BY count DESC
       LIMIT 5
     `);
-    res.json(rows);
-  } catch (err) {
-    res.status(500).json({ message: "Error fetching category stats" });
+      res.json(rows);
+    } catch (err) {
+      res.status(500).json({ message: "Error fetching category stats" });
+    }
   }
-});
-
-
-
+);
 
 export default router;

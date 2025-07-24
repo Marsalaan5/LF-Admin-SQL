@@ -10,29 +10,26 @@ function ComplaintManagement() {
   const [users, setUsers] = useState([]);
   const [categoryList, setCategoryList] = useState([]);
   const [subCategoryList, setSubCategoryList] = useState([]);
-  // const [categoryMap, setCategoryMap] = useState({});
   const [complaints, setComplaints] = useState([]);
   const [complaintsPerPage, setComplaintsPerPage] = useState(10);
   const [statusOptions, setStatusOptions] = useState([]);
   const [modalImage, setModalImage] = useState(null);
   const [activeStatus, setActiveStatus] = useState("total");
   const [selectedUser, setSelectedUser] = useState(null);
-  const [selectedComplaintLocation, setSelectedComplaintLocation] = useState(null);
+  const [selectedComplaintLocation, setSelectedComplaintLocation] =
+    useState(null);
   const [feedbackModal, setFeedbackModal] = React.useState(null);
-const [rating, setRating] = React.useState("");
-const [feedbackText, setFeedbackText] = React.useState("");
-
+  const [rating, setRating] = React.useState("");
+  const [feedbackText, setFeedbackText] = React.useState("");
 
   const [page, setPage] = useState(1);
   const location = useLocation();
-  
 
-
-  useEffect((categoryId) => {
+  useEffect(() => {
     if (token) {
       fetchUsers();
       fetchCategories();
-      fetchSubCategories(categoryId);
+      fetchSubCategories();
       fetchComplaints();
       fetchStatusOptions();
     }
@@ -45,63 +42,31 @@ const [feedbackText, setFeedbackText] = React.useState("");
     setUsers(res.data.users);
   };
 
-
-const fetchCategories = async () => {
-  try {
-    let roleBasedEndpoint = `http://localhost:5001/auth/${user.role}-categories`;
-
-    const res = await axios.get(roleBasedEndpoint, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    setCategoryList(res.data);
-  } catch (err) {
-
+  const fetchCategories = async () => {
     try {
       const res = await axios.get("http://localhost:5001/auth/categories", {
         headers: { Authorization: `Bearer ${token}` },
       });
-
-      
 
       setCategoryList(res.data);
     } catch (err) {
       console.error("Failed to load categories:", err);
       setCategoryList([]);
     }
-  }
-};
+  };
 
 
-// const fetchSubCategories = async () => {
-//   try {
-//     const res = await axios.get(`http://localhost:5001/auth/categories/${categoryId}/subcategories`, {
-//       headers: { Authorization: `Bearer ${token}` },
-//     });
-//     setSubCategoryList(res.data);
-//   } catch (err) {
-//     console.error("Failed to load categories:", err);
-//     setSubCategoryList([]);
-//   }
-// };
-
-
-const fetchSubCategories = async () => {
-  try {
-    const res = await axios.get(
-      `http://localhost:5001/auth/subcategories`, // Adjust endpoint if needed
-      {
+  const fetchSubCategories = async () => {
+    try {
+      const res = await axios.get(`http://localhost:5001/auth/subcategories`, {
         headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-    setSubCategoryList(res.data); // Update state with the subcategories
-  } catch (err) {
-    console.error("Failed to load subcategories:", err);
-    setSubCategoryList([]); // Reset the state in case of error
-  }
-};
-
-
+      });
+      setSubCategoryList(res.data);
+    } catch (err) {
+      console.error("Failed to load subcategories:", err);
+      setSubCategoryList([]);
+    }
+  };
 
   const fetchComplaints = async () => {
     const res = await axios.get("http://localhost:5001/auth/complaints", {
@@ -150,26 +115,25 @@ const fetchSubCategories = async () => {
     }
   };
 
-  
-const handleSubmitFeedback = async () => {
-  if (!rating) return;
+  const handleSubmitFeedback = async () => {
+    if (!rating) return;
 
-  try {
-    await axios.put(
-      `http://localhost:5001/auth/complaints/${feedbackModal.id}/feedback`,
-      { rating: Number(rating), feedback: feedbackText },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
+    try {
+      await axios.put(
+        `http://localhost:5001/auth/complaints/${feedbackModal.id}/feedback`,
+        { rating: Number(rating), feedback: feedbackText },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
-    toast.success("Feedback submitted");
-    setFeedbackModal(null);
-    setRating("");
-    setFeedbackText("");
-    fetchComplaints(); // your existing function to refresh the list
-  } catch (error) {
-    toast.error("Failed to submit feedback");
-  }
-};
+      toast.success("Feedback submitted");
+      setFeedbackModal(null);
+      setRating("");
+      setFeedbackText("");
+      fetchComplaints(); // your existing function to refresh the list
+    } catch (error) {
+      toast.error("Failed to submit feedback", error);
+    }
+  };
 
   const handleImageClick = (imagePath) => setModalImage(imagePath);
   const closeModal = () => setModalImage(null);
@@ -177,10 +141,35 @@ const handleSubmitFeedback = async () => {
 
   const userMap = Object.fromEntries(users.map((u) => [u.id, u]));
   const categoryMap = Object.fromEntries(categoryList.map((c) => [c.id, c]));
-const subcategoryMap = Object.fromEntries(subCategoryList.map((s) => [s.id, s])
-);
 
+  const subcategoryMap = Object.fromEntries(
+    subCategoryList.map((s) => [s.id, s])
+  );
 
+  const validateCategorySubcategoryMapping = () => {
+    complaints.forEach((c) => {
+      if (!categoryMap[c.categories]) {
+        console.warn(
+          `🚨 Complaint ID ${c.id} has an invalid category ID: ${c.categories}`
+        );
+      }
+
+      if (!subcategoryMap[c.subcategory]) {
+        console.warn(
+          `⚠️ Complaint ID ${c.id} has an invalid subcategory ID: ${c.subcategory}`
+        );
+      }
+    });
+  };
+  useEffect(() => {
+    if (
+      complaints.length &&
+      Object.keys(categoryMap).length &&
+      Object.keys(subcategoryMap).length
+    ) {
+      validateCategorySubcategoryMapping();
+    }
+  }, [complaints, categoryMap, subcategoryMap]);
 
   const visibleComplaints =
     user?.role === "Super Admin"
@@ -279,43 +268,43 @@ const subcategoryMap = Object.fromEntries(subCategoryList.map((s) => [s.id, s])
 
       {/* Status filter cards */}
       <div className="row">
-        {[...["total"], ...statusOptions.map((s) => s.status.toLowerCase())].map(
-          (key) => {
-            const label =
-              key.charAt(0).toUpperCase() + key.slice(1);
-            const count = statusCounts[key] || 0;
-            const color = statusTextColors[key] || "text-muted";
-            const icon = statusIcons[key] || "fas fa-question-circle";
-            const isActive = activeStatus === key;
-            return (
-              <div className="col-md-3 col-sm-6 mb-2" key={key}>
-                <div
-                  className={`card shadow-sm small-card border ${
-                    isActive ? "border-" + color.split(" ")[1] : ""
-                  }`}
-                  style={{ cursor: "pointer" }}
-                  onClick={() => {
-                    setActiveStatus(key);
-                    setPage(1);
-                  }}
-                >
-                  <div className="card-body d-flex justify-content-between align-items-center">
-                    <div>
-                      <h6
-                        className={`${color} text-uppercase mb-1`}
-                        style={{ fontSize: "0.75rem" }}
-                      >
-                        {label}
-                      </h6>
-                      <h5 className={`fw-bold ${color} mb-0`}>{count}</h5>
-                    </div>
-                    <i className={`${icon} fa-2x ${color}`}></i>
+        {[
+          ...["total"],
+          ...statusOptions.map((s) => s.status.toLowerCase()),
+        ].map((key) => {
+          const label = key.charAt(0).toUpperCase() + key.slice(1);
+          const count = statusCounts[key] || 0;
+          const color = statusTextColors[key] || "text-muted";
+          const icon = statusIcons[key] || "fas fa-question-circle";
+          const isActive = activeStatus === key;
+          return (
+            <div className="col-md-3 col-sm-6 mb-2" key={key}>
+              <div
+                className={`card shadow-sm small-card border ${
+                  isActive ? "border-" + color.split(" ")[1] : ""
+                }`}
+                style={{ cursor: "pointer" }}
+                onClick={() => {
+                  setActiveStatus(key);
+                  setPage(1);
+                }}
+              >
+                <div className="card-body d-flex justify-content-between align-items-center">
+                  <div>
+                    <h6
+                      className={`${color} text-uppercase mb-1`}
+                      style={{ fontSize: "0.75rem" }}
+                    >
+                      {label}
+                    </h6>
+                    <h5 className={`fw-bold ${color} mb-0`}>{count}</h5>
                   </div>
+                  <i className={`${icon} fa-2x ${color}`}></i>
                 </div>
               </div>
-            );
-          }
-        )}
+            </div>
+          );
+        })}
       </div>
 
       {/* Table */}
@@ -335,160 +324,176 @@ const subcategoryMap = Object.fromEntries(subCategoryList.map((s) => [s.id, s])
               <th>Status</th>
               <th>Assigned To</th>
               <th>Action</th>
-              <th>Feedback</th> 
+              <th>Feedback</th>
             </tr>
           </thead>
-     <tbody>
-  {currentComplaint.length === 0 ? (
-    <tr>
-      <td colSpan="11" className="text-center">
-        No complaints found.
-      </td>
-    </tr>
-  ) : (
-    // currentComplaint.map((c, i) => (
-      
-    //   <tr key={c.id}>
+          <tbody>
+            {currentComplaint.length === 0 ? (
+              <tr>
+                <td colSpan="11" className="text-center">
+                  No complaints found.
+                </td>
+              </tr>
+            ) : (
+              currentComplaint.map((c, i) => {
+                console.log("Complainttttttttt object:", c);
 
-    currentComplaint.map((c, i) => {
-  console.log("Complaint:", c);
-  console.log("CategoryMap Match:", categoryMap[c.categories]);
-  console.log("SubCategoryMap Match:", subcategoryMap[c.subcategories]);
+                console.log("Complaint:", c);
+                console.log("CategoryMap Match:", categoryMap[c.categories]);
 
-  return (
-    <tr key={c.id}>
-        <td>{(page - 1) * complaintsPerPage + i + 1}</td>
-        <td>
-          ID: {c.user_id}<br />
-          Name: {userMap[c.user_id]?.name || "Unknown"}
-        </td>
-        <td>{c.mobile}</td>
-        <td style={{ wordWrap: "break-word", maxWidth: "200px" }}>{c.address}</td>
+                return (
+                  <tr key={c.id}>
+                    <td>{(page - 1) * complaintsPerPage + i + 1}</td>
+                    <td>
+                      ID: {c.user_id}
+                      <br />
+                      Name: {userMap[c.user_id]?.name || "Unknown"}
+                    </td>
+                    <td>{c.mobile}</td>
+                    <td style={{ wordWrap: "break-word", maxWidth: "200px" }}>
+                      {c.address}
+                    </td>
 
+                    <td>{categoryMap[c.categories]?.category_name || "N/A"}</td>
+                    {/* <td>{subcategoryMap[(c.subcategories)]?.subcategory_name || "-"}</td> */}
+                    <td>
+                      {c.subcategory && subcategoryMap[c.subcategory] ? (
+                        subcategoryMap[c.subcategory].subcategory_name
+                      ) : (
+                        <span className="text-muted">—</span>
+                      )}
+                    </td>
 
-        {/* <td>{categoryMap[c.categories]?.category_name || "All"}</td> */}
+                    {/* <td>{c.subcategory_name || "N/A"}</td> */}
 
-        <td>{categoryMap[(c.categories)]?.category_name || "N/A"}</td>
-        {/* <td>{categoryMap[(c.categories)]?.category_name || "N/A"}</td> */}
-       <td>{subcategoryMap[c.subcategories]?.subcategory_name || "—"}</td>
+                    <td style={{ wordWrap: "break-word", maxWidth: "200px" }}>
+                      {c.description}
+                    </td>
 
+                    <td>
+                      {c.image ? (
+                        <img
+                          src={`http://localhost:5001/auth/uploads/${c.image}`}
+                          alt="Complaint"
+                          style={{ width: "100px", cursor: "pointer" }}
+                          onClick={() =>
+                            handleImageClick(
+                              `http://localhost:5001/auth/uploads/${c.image}`
+                            )
+                          }
+                        />
+                      ) : (
+                        "N/A"
+                      )}
+                    </td>
 
+                    <td>
+                      <span
+                        className={getStatusBadgeColor(c.status.toLowerCase())}
+                      >
+                        {c.status}
+                      </span>
+                      {user?.role === "Super Admin" && (
+                        <select
+                          value={c.status}
+                          onChange={(e) =>
+                            handleStatusChange(c.id, e.target.value)
+                          }
+                          className="form-select mt-1"
+                        >
+                          {statusOptions.map((s) => (
+                            <option key={s.id} value={s.status}>
+                              {s.status}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </td>
 
-       
+                    <td>
+                      {user?.role === "Super Admin" ? (
+                        <div className="d-flex align-items-center gap-1">
+                          <select
+                            className="form-select form-select-sm border-primary"
+                            value={c.assigned_to || ""}
+                            onChange={(e) => handleAssign(c.id, e.target.value)}
+                          >
+                            <option value="">Unassigned</option>
+                            {users
+                              .filter((u) => ["Admin"].includes(u.role))
+                              .map((u) => (
+                                <option key={u.id} value={u.id}>
+                                  {u.name} ({u.role})
+                                </option>
+                              ))}
+                          </select>
+                        </div>
+                      ) : c.assigned_to ? (
+                        <div className="d-flex align-items-center gap-2">
+                          <i className="fas fa-user-tag text-info"></i>
+                          <div>
+                            <strong>{userMap[c.assigned_to]?.name}</strong>
+                            <br />
+                            <span className="badge bg-secondary small">
+                              {userMap[c.assigned_to]?.role}
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-muted fst-italic">
+                          Not assigned
+                        </span>
+                      )}
+                    </td>
 
-      
-        <td style={{ wordWrap: "break-word", maxWidth: "200px" }}>{c.description}</td>
-        
-        <td>
-          {c.image ? (
-            <img
-              src={`http://localhost:5001/auth/uploads/${c.image}`}
-              alt="Complaint"
-              style={{ width: "100px", cursor: "pointer" }}
-              onClick={() =>
-                handleImageClick(`http://localhost:5001/auth/uploads/${c.image}`)
-              }
-            />
-          ) : "N/A"}
-        </td>
+                    <td>
+                      <button
+                        className="btn btn-sm me-1"
+                        onClick={() => handleViewUser(c.user_id)}
+                      >
+                        <i className="fas fa-eye"></i>
+                      </button>
+                      {c.latitude && c.longitude && (
+                        <button
+                          className="btn btn-sm btn-outline-primary"
+                          onClick={() =>
+                            setSelectedComplaintLocation({
+                              lat: parseFloat(c.latitude),
+                              lng: parseFloat(c.longitude),
+                              address: c.address,
+                            })
+                          }
+                        >
+                          <i className="fas fa-map-marker-alt"></i>
+                        </button>
+                      )}
+                    </td>
 
-        <td>
-          <span className={getStatusBadgeColor(c.status.toLowerCase())}>
-            {c.status}
-          </span>
-          {user?.role === "Super Admin" && (
-            <select
-              value={c.status}
-              onChange={(e) => handleStatusChange(c.id, e.target.value)}
-              className="form-select mt-1"
-            >
-              {statusOptions.map((s) => (
-                <option key={s.id} value={s.status}>{s.status}</option>
-              ))}
-            </select>
-          )}
-        </td>
-
-        <td>
-          {user?.role === "Super Admin" ? (
-            <div className="d-flex align-items-center gap-1">
-              <select
-                className="form-select form-select-sm border-primary"
-                value={c.assigned_to || ""}
-                onChange={(e) => handleAssign(c.id, e.target.value)}
-              >
-                <option value="">Unassigned</option>
-                {users
-                  .filter((u) => ["Admin"].includes(u.role))
-                  .map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name} ({u.role})
-                    </option>
-                  ))}
-              </select>
-            </div>
-          ) : c.assigned_to ? (
-            <div className="d-flex align-items-center gap-2">
-              <i className="fas fa-user-tag text-info"></i>
-              <div>
-                <strong>{userMap[c.assigned_to]?.name}</strong><br />
-                <span className="badge bg-secondary small">
-                  {userMap[c.assigned_to]?.role}
-                </span>
-              </div>
-            </div>
-          ) : (
-            <span className="text-muted fst-italic">Not assigned</span>
-          )}
-        </td>
-
-        <td>
-          <button
-            className="btn btn-sm me-1"
-            onClick={() => handleViewUser(c.user_id)}
-          >
-            <i className="fas fa-eye"></i>
-          </button>
-          {c.latitude && c.longitude && (
-            <button
-              className="btn btn-sm btn-outline-primary"
-              onClick={() =>
-                setSelectedComplaintLocation({
-                  lat: parseFloat(c.latitude),
-                  lng: parseFloat(c.longitude),
-                  address: c.address,
-                })
-              }
-            >
-              <i className="fas fa-map-marker-alt"></i>
-            </button>
-          )}
-        </td>
-
-        <td>
-          {c.status === "resolved" && !c.feedback && c.user_id === user?.id ? (
-            <button
-              className="btn btn-sm btn-outline-success"
-              onClick={() => setFeedbackModal(c)}
-            >
-              Give Feedback
-            </button>
-          ) : c.rating ? (
-            <div>
-              <span>⭐ {c.rating}/5</span><br />
-              <small>{c.feedback}</small>
-            </div>
-          ) : (
-            <span>—</span>
-          )}
-        </td>
-      </tr>
-  )}
-    )
-  
-  )}
-</tbody>
-
+                    <td>
+                      {c.status === "resolved" &&
+                      !c.feedback &&
+                      c.user_id === user?.id ? (
+                        <button
+                          className="btn btn-sm btn-outline-success"
+                          onClick={() => setFeedbackModal(c)}
+                        >
+                          Give Feedback
+                        </button>
+                      ) : c.rating ? (
+                        <div>
+                          <span>⭐ {c.rating}/5</span>
+                          <br />
+                          <small>{c.feedback}</small>
+                        </div>
+                      ) : (
+                        <span>—</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
         </table>
       </div>
 
@@ -513,10 +518,7 @@ const subcategoryMap = Object.fromEntries(subCategoryList.map((s) => [s.id, s])
         />
       </Pagination>
 
-
-
-
-   {modalImage && (
+      {modalImage && (
         <div
           className="modal fade show d-block"
           tabIndex="-1"
@@ -532,7 +534,11 @@ const subcategoryMap = Object.fromEntries(subCategoryList.map((s) => [s.id, s])
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">Image Preview</h5>
-                <button type="button" className="btn-close" onClick={closeModal}></button>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={closeModal}
+                ></button>
               </div>
               <div className="modal-body text-center">
                 <img
@@ -546,149 +552,161 @@ const subcategoryMap = Object.fromEntries(subCategoryList.map((s) => [s.id, s])
         </div>
       )}
 
-
       {selectedUser && (
-  <div
-    className="modal fade show d-block"
-    tabIndex="-1"
-    role="dialog"
-    style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
-    onClick={() => setSelectedUser(null)}
-  >
-    <div
-      className="modal-dialog modal-dialog-centered"
-      role="document"
-      onClick={(e) => e.stopPropagation()}
-    >
-      <div className="modal-content">
-        <div className="modal-header">
-          <h5 className="modal-title">Customer Profile</h5>
-          <button type="button" className="btn-close" onClick={() => setSelectedUser(null)}></button>
-        </div>
-        <div className="modal-body">
-          <p><strong>ID:</strong> {selectedUser.id}</p>
-          <p><strong>Name:</strong> {selectedUser.name}</p>
-          <p><strong>Email:</strong> {selectedUser.email}</p>
-          <p><strong>Mobile:</strong> {selectedUser.mobile || "N/A"}</p>
-          {/* <p><strong>Address:</strong> {selectedUser.address|| "N/A"}</p> */}
-          <p><strong>Role:</strong> {selectedUser.role}</p>
-          {/* You can show more fields if available */}
-        </div>
-      </div>
-    </div>
-  </div>
-)}
-
-{selectedComplaintLocation && (
-  <div
-    className="modal fade show d-block"
-    tabIndex="-1"
-    role="dialog"
-    style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
-    onClick={() => setSelectedComplaintLocation(null)}
-  >
-    <div
-      className="modal-dialog modal-lg modal-dialog-centered"
-      role="document"
-      onClick={(e) => e.stopPropagation()}
-    >
-      <div className="modal-content">
-        <div className="modal-header">
-          <h5 className="modal-title">
-            Complaint Location: {selectedComplaintLocation.title}
-          </h5>
-          <button
-            type="button"
-            className="btn-close"
-            onClick={() => setSelectedComplaintLocation(null)}
-          ></button>
-        </div>
-        <div className="modal-body">
-          <p><strong>Address:</strong> {selectedComplaintLocation.address}</p>
-          <div style={{ height: "400px" }}>
-            <iframe
-              width="100%"
-              height="100%"
-              frameBorder="0"
-              style={{ border: 0 }}
-              src={`https://www.google.com/maps?q=${selectedComplaintLocation.lat},${selectedComplaintLocation.lng}&z=15&output=embed`}
-              allowFullScreen
-              title="Complaint Location"
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-)}
-
-
-{feedbackModal && (
-  <div
-    className="modal fade show d-block"
-    tabIndex="-1"
-    style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
-  >
-    <div className="modal-dialog modal-dialog-centered">
-      <div className="modal-content">
-        <div className="modal-header">
-          <h5 className="modal-title">Feedback for: {feedbackModal.title}</h5>
-          <button
-            type="button"
-            className="btn-close"
-            onClick={() => setFeedbackModal(null)}
-          ></button>
-        </div>
-        <div className="modal-body">
-          <div className="mb-3">
-            <label className="form-label">Rating (1 to 5)</label>
-            <select
-              className="form-select"
-              value={rating}
-              onChange={(e) => setRating(e.target.value)}
-            >
-              <option value="">Select rating</option>
-              {[1, 2, 3, 4, 5].map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="mb-3">
-            <label className="form-label">Feedback</label>
-            <textarea
-              className="form-control"
-              rows="3"
-              value={feedbackText}
-              onChange={(e) => setFeedbackText(e.target.value)}
-              placeholder="Write your feedback here..."
-            />
-          </div>
-        </div>
-        <div className="modal-footer">
-          <button
-            className="btn btn-secondary"
-            onClick={() => setFeedbackModal(null)}
+        <div
+          className="modal fade show d-block"
+          tabIndex="-1"
+          role="dialog"
+          style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
+          onClick={() => setSelectedUser(null)}
+        >
+          <div
+            className="modal-dialog modal-dialog-centered"
+            role="document"
+            onClick={(e) => e.stopPropagation()}
           >
-            Cancel
-          </button>
-          <button
-            className="btn btn-primary"
-            onClick={handleSubmitFeedback}
-            disabled={!rating}
-          >
-            Submit
-          </button>
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Customer Profile</h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => setSelectedUser(null)}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <p>
+                  <strong>ID:</strong> {selectedUser.id}
+                </p>
+                <p>
+                  <strong>Name:</strong> {selectedUser.name}
+                </p>
+                <p>
+                  <strong>Email:</strong> {selectedUser.email}
+                </p>
+                <p>
+                  <strong>Mobile:</strong> {selectedUser.mobile || "N/A"}
+                </p>
+                {/* <p><strong>Address:</strong> {selectedUser.address|| "N/A"}</p> */}
+                <p>
+                  <strong>Role:</strong> {selectedUser.role}
+                </p>
+                {/* You can show more fields if available */}
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
-  </div>
-)}
+      )}
 
+      {selectedComplaintLocation && (
+        <div
+          className="modal fade show d-block"
+          tabIndex="-1"
+          role="dialog"
+          style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
+          onClick={() => setSelectedComplaintLocation(null)}
+        >
+          <div
+            className="modal-dialog modal-lg modal-dialog-centered"
+            role="document"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">
+                  Complaint Location: {selectedComplaintLocation.title}
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => setSelectedComplaintLocation(null)}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <p>
+                  <strong>Address:</strong> {selectedComplaintLocation.address}
+                </p>
+                <div style={{ height: "400px" }}>
+                  <iframe
+                    width="100%"
+                    height="100%"
+                    frameBorder="0"
+                    style={{ border: 0 }}
+                    src={`https://www.google.com/maps?q=${selectedComplaintLocation.lat},${selectedComplaintLocation.lng}&z=15&output=embed`}
+                    allowFullScreen
+                    title="Complaint Location"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
-
-
+      {feedbackModal && (
+        <div
+          className="modal fade show d-block"
+          tabIndex="-1"
+          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+        >
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">
+                  Feedback for: {feedbackModal.title}
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => setFeedbackModal(null)}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <div className="mb-3">
+                  <label className="form-label">Rating (1 to 5)</label>
+                  <select
+                    className="form-select"
+                    value={rating}
+                    onChange={(e) => setRating(e.target.value)}
+                  >
+                    <option value="">Select rating</option>
+                    {[1, 2, 3, 4, 5].map((r) => (
+                      <option key={r} value={r}>
+                        {r}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Feedback</label>
+                  <textarea
+                    className="form-control"
+                    rows="3"
+                    value={feedbackText}
+                    onChange={(e) => setFeedbackText(e.target.value)}
+                    placeholder="Write your feedback here..."
+                  />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => setFeedbackModal(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="btn btn-primary"
+                  onClick={handleSubmitFeedback}
+                  disabled={!rating}
+                >
+                  Submit
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
