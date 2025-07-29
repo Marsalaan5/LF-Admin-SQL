@@ -810,8 +810,179 @@
 // export default Category;
 
 
+// import React, { useContext, useEffect, useState } from "react";
+// import { AuthContext } from "../../context/AuthContext";
+
+// function Category() {
+//   const [categories, setCategories] = useState([]);
+//   const [modalData, setModalData] = useState({ show: false, mode: "add", data: null });
+//   const { token } = useContext(AuthContext);
+
+//   const fetchCategories = async () => {
+//     try {
+//       const res = await fetch("http://localhost:5001/auth/categories", {
+//         headers: { Authorization: `Bearer ${token}` },
+//       });
+//       if (!res.ok) throw new Error("Failed to fetch categories");
+//       const data = await res.json();
+//       setCategories(data);
+//     } catch (err) {
+//       console.error(err);
+//       alert("Failed to load categories.");
+//     }
+//   };
+
+//   useEffect(() => {
+//     if (token) fetchCategories();
+//   }, [token]);
+
+//   const openModal = (mode, data = null) => setModalData({ show: true, mode, data });
+//   const closeModal = () => setModalData({ show: false, mode: "", data: null });
+
+//   const handleSubmit = async (e) => {
+//     e.preventDefault();
+//     const formData = Object.fromEntries(new FormData(e.target));
+//     const method = modalData.mode === "add" ? "POST" : "PUT";
+//     const url = modalData.mode === "add"
+//       ? "http://localhost:5001/auth/categories"
+//       : `http://localhost:5001/auth/categories/${modalData.data.id}`;
+
+//     try {
+//       const res = await fetch(url, {
+//         method,
+//         headers: {
+//           "Content-Type": "application/json",
+//           Authorization: `Bearer ${token}`,
+//         },
+//         body: JSON.stringify(formData),
+//       });
+//       if (!res.ok) throw new Error("Failed to save category");
+//       closeModal();
+//       fetchCategories();
+//     } catch (err) {
+//       alert("Error saving category");
+//       console.error(err);
+//     }
+//   };
+
+//   return (
+//     <div className="container-fluid border shadow-sm" style={{ marginTop: "100px", width: "98%" }}>
+//       <div className="d-flex justify-content-between align-items-center mt-5 mb-3">
+
+//       {/* <div className="d-flex justify-content-between align-items-center mb-4"> */}
+
+//        <div className="col-sm-6">
+//                 <h3>Category Management</h3>
+//                 <div className="col-sm-6">
+//                   <ol className="breadcrumb float-sm-right">
+//                     <li className="breadcrumb-item">
+//                       <a href="/">Home</a>
+//                     </li>
+//                     <li className="breadcrumb-item active">Category Management</li>
+//                   </ol>
+//                 </div>
+//               </div>
+//         {/* <h2 className="fw-bold">Category Manager</h2> */}
+//         <button className="btn btn-success" onClick={() => openModal("add")}>
+//           <i className="bi bi-plus-circle me-1"></i> Add Category
+//         </button>
+//       </div>
+
+//       {/* Cards Grid */}
+//       <div className="row">
+//         {categories.length === 0 ? (
+//           <div className="text-muted text-center py-5">No categories available.</div>
+//         ) : (
+//           categories.map((cat) => (
+//             <div key={cat.id} className="col-md-6 col-lg-4 mb-4">
+//               <div className="card h-100 shadow-sm border-0">
+//                 <div className="card-body d-flex flex-column">
+//                   <p className="mb-1"><strong>ID:</strong> {cat.id}</p>
+//                   <p className="mb-1"><strong>Category:</strong> {cat.category_name}</p>
+//                   <p className="mb-3"><strong>Description:</strong> {cat.description}</p>
+//                   <button
+//                     className="btn btn-outline-primary btn-sm mt-auto align-self-end"
+//                     onClick={() => openModal("edit", cat)}
+//                   >
+//                     Edit
+//                   </button>
+//                 </div>
+//               </div>
+//             </div>
+//           ))
+//         )}
+//       </div>
+
+//       {/* Modal */}
+//       {modalData.show && (
+//         <div
+//           className="modal fade show d-block"
+//           tabIndex="-1"
+//           style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+//           onClick={closeModal}
+//         >
+//           <div className="modal-dialog modal-dialog-centered" onClick={(e) => e.stopPropagation()}>
+//             <div className="modal-content shadow">
+//               <form onSubmit={handleSubmit}>
+//                 <div className="modal-header bg-primary text-white">
+//                   <h5 className="modal-title">
+//                     {modalData.mode === "add" ? "Add New" : "Edit"} Category
+//                   </h5>
+//                   <button type="button" className="btn-close btn-close-white" onClick={closeModal}></button>
+//                 </div>
+//                 <div className="modal-body">
+//                   <div className="mb-3">
+//                     <label className="form-label">Category Name</label>
+//                     <input
+//                       type="text"
+//                       name="category_name"
+//                       className="form-control"
+//                       defaultValue={modalData.data?.category_name || ""}
+//                       required
+//                     />
+//                   </div>
+//                   <div className="mb-3">
+//                     <label className="form-label">Description</label>
+//                     <textarea
+//                       name="description"
+//                       className="form-control"
+//                       defaultValue={modalData.data?.description || ""}
+//                       required
+//                     />
+//                   </div>
+//                 </div>
+//                 <div className="modal-footer">
+//                   <button type="button" className="btn btn-secondary" onClick={closeModal}>
+//                     Cancel
+//                   </button>
+//                   <button type="submit" className="btn btn-primary">
+//                     {modalData.mode === "add" ? "Add" : "Save Changes"}
+//                   </button>
+//                 </div>
+//               </form>
+//             </div>
+//           </div>
+//         </div>
+//       )}
+//     </div>
+//   );
+// }
+
+// export default Category;
+
+
 import React, { useContext, useEffect, useState } from "react";
 import { AuthContext } from "../../context/AuthContext";
+import {
+  Container,
+  Row,
+  Col,
+  Button,
+  Modal,
+  Form,
+  Card,
+  Breadcrumb,
+} from "react-bootstrap";
 
 function Category() {
   const [categories, setCategories] = useState([]);
@@ -836,16 +1007,20 @@ function Category() {
     if (token) fetchCategories();
   }, [token]);
 
-  const openModal = (mode, data = null) => setModalData({ show: true, mode, data });
-  const closeModal = () => setModalData({ show: false, mode: "", data: null });
+  const openModal = (mode, data = null) =>
+    setModalData({ show: true, mode, data });
+
+  const closeModal = () =>
+    setModalData({ show: false, mode: "", data: null });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     const formData = Object.fromEntries(new FormData(e.target));
     const method = modalData.mode === "add" ? "POST" : "PUT";
-    const url = modalData.mode === "add"
-      ? "http://localhost:5001/auth/categories"
-      : `http://localhost:5001/auth/categories/${modalData.data.id}`;
+    const url =
+      modalData.mode === "add"
+        ? "http://localhost:5001/auth/categories"
+        : `http://localhost:5001/auth/categories/${modalData.data.id}`;
 
     try {
       const res = await fetch(url, {
@@ -866,105 +1041,92 @@ function Category() {
   };
 
   return (
-    <div className="container-fluid border shadow-sm" style={{ marginTop: "100px", width: "98%" }}>
+    <Container fluid className="border shadow-sm" style={{ marginTop: "100px", width: "98%" }}>
       <div className="d-flex justify-content-between align-items-center mt-5 mb-3">
-
-      {/* <div className="d-flex justify-content-between align-items-center mb-4"> */}
-
-       <div className="col-sm-6">
-                <h3>Category Management</h3>
-                <div className="col-sm-6">
-                  <ol className="breadcrumb float-sm-right">
-                    <li className="breadcrumb-item">
-                      <a href="/">Home</a>
-                    </li>
-                    <li className="breadcrumb-item active">Category Management</li>
-                  </ol>
-                </div>
-              </div>
-        {/* <h2 className="fw-bold">Category Manager</h2> */}
-        <button className="btn btn-success" onClick={() => openModal("add")}>
+        <div>
+          <h3>Category Management</h3>
+          <Breadcrumb className="mb-0">
+            <Breadcrumb.Item href="/">Home</Breadcrumb.Item>
+            <Breadcrumb.Item active>Category Management</Breadcrumb.Item>
+          </Breadcrumb>
+        </div>
+        <Button variant="success" onClick={() => openModal("add")}>
           <i className="bi bi-plus-circle me-1"></i> Add Category
-        </button>
+        </Button>
       </div>
 
       {/* Cards Grid */}
-      <div className="row">
+      <Row>
         {categories.length === 0 ? (
-          <div className="text-muted text-center py-5">No categories available.</div>
+          <Col className="text-muted text-center py-5">No categories available.</Col>
         ) : (
           categories.map((cat) => (
-            <div key={cat.id} className="col-md-6 col-lg-4 mb-4">
-              <div className="card h-100 shadow-sm border-0">
-                <div className="card-body d-flex flex-column">
+            <Col key={cat.id} md={6} lg={4} className="mb-4">
+              <Card className="h-100 shadow-sm border-0">
+                <Card.Body className="d-flex flex-column">
                   <p className="mb-1"><strong>ID:</strong> {cat.id}</p>
                   <p className="mb-1"><strong>Category:</strong> {cat.category_name}</p>
                   <p className="mb-3"><strong>Description:</strong> {cat.description}</p>
-                  <button
-                    className="btn btn-outline-primary btn-sm mt-auto align-self-end"
+                  <Button
+                    variant="outline-primary"
+                    size="sm"
+                    className="mt-auto align-self-end"
                     onClick={() => openModal("edit", cat)}
                   >
                     Edit
-                  </button>
-                </div>
-              </div>
-            </div>
+                  </Button>
+                </Card.Body>
+              </Card>
+            </Col>
           ))
         )}
-      </div>
+      </Row>
 
       {/* Modal */}
-      {modalData.show && (
-        <div
-          className="modal fade show d-block"
-          tabIndex="-1"
-          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
-          onClick={closeModal}
-        >
-          <div className="modal-dialog modal-dialog-centered" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-content shadow">
-              <form onSubmit={handleSubmit}>
-                <div className="modal-header bg-primary text-white">
-                  <h5 className="modal-title">
-                    {modalData.mode === "add" ? "Add New" : "Edit"} Category
-                  </h5>
-                  <button type="button" className="btn-close btn-close-white" onClick={closeModal}></button>
-                </div>
-                <div className="modal-body">
-                  <div className="mb-3">
-                    <label className="form-label">Category Name</label>
-                    <input
-                      type="text"
-                      name="category_name"
-                      className="form-control"
-                      defaultValue={modalData.data?.category_name || ""}
-                      required
-                    />
-                  </div>
-                  <div className="mb-3">
-                    <label className="form-label">Description</label>
-                    <textarea
-                      name="description"
-                      className="form-control"
-                      defaultValue={modalData.data?.description || ""}
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="modal-footer">
-                  <button type="button" className="btn btn-secondary" onClick={closeModal}>
-                    Cancel
-                  </button>
-                  <button type="submit" className="btn btn-primary">
-                    {modalData.mode === "add" ? "Add" : "Save Changes"}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+      <Modal
+        show={modalData.show}
+        onHide={closeModal}
+        centered
+        backdrop="static"
+      >
+        <Form onSubmit={handleSubmit}>
+          <Modal.Header closeButton className="bg-primary text-white">
+            <Modal.Title>
+              {modalData.mode === "add" ? "Add New" : "Edit"} Category
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <Form.Group className="mb-3">
+              <Form.Label>Category Name</Form.Label>
+              <Form.Control
+                type="text"
+                name="category_name"
+                defaultValue={modalData.data?.category_name || ""}
+                required
+              />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Description</Form.Label>
+              <Form.Control
+                as="textarea"
+                name="description"
+                rows={3}
+                defaultValue={modalData.data?.description || ""}
+                required
+              />
+            </Form.Group>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={closeModal}>
+              Cancel
+            </Button>
+            <Button variant="primary" type="submit">
+              {modalData.mode === "add" ? "Add" : "Save Changes"}
+            </Button>
+          </Modal.Footer>
+        </Form>
+      </Modal>
+    </Container>
   );
 }
 

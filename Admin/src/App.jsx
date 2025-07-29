@@ -33,6 +33,7 @@ import ResetPassword from "./pages/ResetPassword.jsx";
 import Category from "./components/submenu/Category.jsx";
 import SubCategory from "./components/submenu/SubCategory.jsx";
 import TrackComplaint from "./pages/TrackComplaint.jsx";
+import Notification from "./pages/Notification.jsx";
 // import Ccms from "./components/submenu/Ccms.jsx";
 // import Water from "./components/submenu/Water.jsx";
 // import ChatBotFlow from "./chatbot/ChatBotFlow.jsx";
@@ -150,6 +151,14 @@ function App() {
               }
             />
             <Route
+              path="/notifications"
+              element={
+                <AuthLayout>
+                  <Notification />
+                </AuthLayout>
+              }
+            />
+            <Route
               path="/menu_management"
               element={
                 <AuthLayout>
@@ -175,6 +184,8 @@ function App() {
               element={<Navigate to="/login" />}
             />
             <Route path="/complaints" element={<Navigate to="/login" />} />
+            <Route path="/notifications" element={<Navigate to="/login" />} />
+            <Route path="/track-complaints" element={<Navigate to="/login" />} />
             <Route path="/menu_management" element={<Navigate to="/login" />} />
 
             <Route path="/users/:id" element={<Navigate to="/login" />} />

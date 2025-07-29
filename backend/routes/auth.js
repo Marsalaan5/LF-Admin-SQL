@@ -19,6 +19,7 @@ import nodemailer from "nodemailer";
 import getAllowedRegistrationRoles from "../services/roleServices.js";
 import Handlebars from "handlebars";
 import { transporter,renderTemplate,sendComplaintEmail } from "../mail/mailer.js"; 
+// import createNotification from "../services/notificationService.js";
 
 
 const __filename = fileURLToPath(import.meta.url);
@@ -67,6 +68,23 @@ function organizeMenu(menuItems, parentId = null) {
       children: organizeMenu(menuItems, item.id),
     }));
 }
+
+const createNotification = async (type, message, relatedEntity, entityId) => {
+  try {
+   
+    await pool.execute(
+      "INSERT INTO notifications (type, message, related_entity, entity_id) VALUES (?, ?, ?, ?)",
+      [type, message, relatedEntity, entityId]
+    );
+
+   
+    const notification = { type, message, relatedEntity, entityId, created_at: new Date() };
+    io.emit('notification', notification); 
+
+  } catch (err) {
+    console.error("Error creating notification:", err);
+  }
+};
 
 const logAudit = async (
   // adminId,
@@ -1247,6 +1265,44 @@ router.post(
   }
 );
 
+
+router.post(
+  "/reorder",
+  authenticateToken,
+  checkPermission("menu_management", "enable", "edit"),
+  async (req, res) => {
+    const { menu } = req.body;
+
+    if (!Array.isArray(menu)) {
+      return res.status(400).json({ error: "Invalid menu format" });
+    }
+
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+
+      // Update each menu item's `order_by` based on new index
+      for (let index = 0; index < menu.length; index++) {
+        const item = menu[index];
+        await connection.execute(
+          `UPDATE menu_items SET order_by = ? WHERE id = ?`,
+          [index, item.id]
+        );
+      }
+
+      await connection.commit();
+      res.status(200).json({ message: "Menu order updated successfully" });
+    } catch (err) {
+      await connection.rollback();
+      console.error("Error reordering menu:", err);
+      res.status(500).json({ error: "Internal server error" });
+    } finally {
+      connection.release();
+    }
+  }
+);
+
+
 router.put(
   "/menu/:id",
   authenticateToken,
@@ -1459,7 +1515,7 @@ router.get(
   checkPermission("subcategory", "enable", "view"),
   async (req, res) => {
     const { categoryId } = req.params;
-    console.log("Category ID:", categoryId);
+    // console.log("Category ID:", categoryId);
 
     try {
       const [rows] = await pool.execute("SELECT * FROM subcategory", []);
@@ -1478,7 +1534,7 @@ router.get(
   checkPermission("subcategory", "enable", "view"),
   async (req, res) => {
     const { categoryId } = req.params;
-    console.log("Category ID:", categoryId);
+    // console.log("Category ID:", categoryId);
 
     try {
       const [rows] = await pool.execute(
@@ -1630,6 +1686,46 @@ router.delete(
 );
 
 
+
+//complaints
+
+// router.get(
+//   "/complaints",
+//   authenticateToken,
+//   checkPermission("complaint_management", "enable", "view"),
+//   async (req, res) => {
+//     try {
+//       const userId = req.user.id;
+//       const role = req.user.role;
+
+//       let query = `
+//         SELECT 
+//           c.*, 
+//           cat.category_name, 
+//           sub.subcategory_name 
+//         FROM complaints c
+//         LEFT JOIN category cat ON c.categories = cat.id
+//         LEFT JOIN subcategory sub ON c.subcategory = sub.id`;
+//       const params = [];
+
+//       if (role !== "Super Admin" && role !== "Admin") {
+//         query += ` WHERE c.user_id = ?`;
+//         params.push(userId);
+//       }
+
+//       query += ` ORDER BY c.created_at DESC`;
+
+//       const [rows] = await pool.execute(query, params);
+
+//       res.status(200).json(rows);
+//     } catch (err) {
+//       console.error("Error fetching complaints:", err);
+//       res.status(500).json({ message: "Error retrieving complaints" });
+//     }
+//   }
+// );
+
+
 router.get(
   "/complaints",
   authenticateToken,
@@ -1638,6 +1734,7 @@ router.get(
     try {
       const userId = req.user.id;
       const role = req.user.role;
+      const { priority } = req.query;  // <-- new param
 
       let query = `
         SELECT 
@@ -1649,9 +1746,20 @@ router.get(
         LEFT JOIN subcategory sub ON c.subcategory = sub.id`;
       const params = [];
 
+      let conditions = [];
+
       if (role !== "Super Admin" && role !== "Admin") {
-        query += ` WHERE c.user_id = ?`;
+        conditions.push(`c.user_id = ?`);
         params.push(userId);
+      }
+      
+      if (priority) {
+        conditions.push(`c.priority = ?`);
+        params.push(priority);
+      }
+
+      if (conditions.length > 0) {
+        query += " WHERE " + conditions.join(" AND ");
       }
 
       query += ` ORDER BY c.created_at DESC`;
@@ -1666,13 +1774,14 @@ router.get(
   }
 );
 
+
 router.get(
   "/complaints/status-options",
   authenticateToken,
   checkPermission("complaint_management", "enable", "view"),
   async (req, res) => {
     try {
-      // MySQL does not provide ENUM values via regular query, so extract them from information_schema
+      
       const [rows] = await pool.execute(`
         SELECT COLUMN_TYPE 
         FROM INFORMATION_SCHEMA.COLUMNS 
@@ -1683,7 +1792,7 @@ router.get(
         return res.status(500).json({ message: "Status column not found" });
       }
 
-      // Extract enum values from: enum('open','closed')
+     
       const enumStr = rows[0].COLUMN_TYPE;
       const matches = enumStr.match(/enum\((.*)\)/i);
 
@@ -1749,8 +1858,6 @@ router.get(
 );
 
 
-
-
 router.post(
   "/complaints",
   upload.single("image"),
@@ -1766,30 +1873,28 @@ router.post(
         address,
         latitude: latRaw,
         longitude: longRaw,
+        priority: priorityRaw,
       } = req.body;
+
+      const priority = ['Low', 'Medium', 'High'].includes(priorityRaw) ? priorityRaw : 'Medium';
 
       const image = req.file ? req.file.filename : null;
       const userId = req.user.id;
 
-
       // Fetch full user details including name
-const [userRows] = await pool.execute(
-  "SELECT name, email FROM login WHERE id = ?",
-  [userId]
-);
+      const [userRows] = await pool.execute(
+        "SELECT name, email FROM login WHERE id = ?",
+        [userId]
+      );
 
-if (userRows.length === 0) {
-  return res.status(404).json({ message: "User not found." });
-}
+      if (userRows.length === 0) {
+        return res.status(404).json({ message: "User not found." });
+      }
 
-
-const user = {
-  name: userRows[0].name,
-  email: userRows[0].email,
-};
-
-
-
+      const user = {
+        name: userRows[0].name,
+        email: userRows[0].email,
+      };
 
       const latitude =
         latRaw !== undefined && latRaw !== "" ? parseFloat(latRaw) : null;
@@ -1803,7 +1908,6 @@ const user = {
       const subcategoryId =
         subcategory && subcategory !== "" ? parseInt(subcategory) : null;
 
-   
       const [categoryRows] = await pool.execute(
         "SELECT id, category_name FROM category WHERE id = ?",
         [categoryId]
@@ -1813,13 +1917,11 @@ const user = {
       }
       const categoryName = categoryRows[0].category_name;
 
-    
       const [subRows] = await pool.execute(
         "SELECT id FROM subcategory WHERE category_id = ?",
         [categoryId]
       );
 
-     
       if (subRows.length > 0 && !subcategoryId) {
         return res
           .status(400)
@@ -1851,24 +1953,21 @@ const user = {
         sanitize(description),
         image || null,
         "pending",
+        priority,
         latitude,
         longitude,
       ];
 
       const [insertResult] = await pool.execute(
         `INSERT INTO complaints 
-          (user_id, mobile, address, categories, subcategory, description, image, status, latitude, longitude)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          (user_id, mobile, address, categories, subcategory, description, image, status, priority, latitude, longitude)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         params
       );
 
       const complaintId = insertResult.insertId;
 
-// console.log("req.user:", req.user);
-
-      // const user = { name: req.user.name, email: req.user.email };
-      
-        let templateName;
+      let templateName;
       let subject;
 
       switch (categoryName.toLowerCase()) {
@@ -1885,32 +1984,19 @@ const user = {
           subject = `Your Complaint Has Been Registered - Ticket #${complaintId}`;
       }
 
-
-
-const emailHtml = renderTemplate(templateName, {
-  userName: user.name,
-  ticketId: complaintId,
-  categoryName: categoryName,
-  description: description,
-});
-
-console.log("Render template data:", {
-  userName: user.name,
-  ticketId: complaintId,
-  categoryName: categoryName,
-  description: description,
-});
-
-
-   
-      await transporter.sendMail({
-        from: '"Support Team" <test.water00@gmail.com>',
-        to: user.email, 
-        subject: `Your Complaint Has Been Registered - Ticket #${complaintId}`,
-        html: emailHtml,
+      const emailHtml = renderTemplate(templateName, {
+        userName: user.name,
+        ticketId: complaintId,
+        categoryName: categoryName,
+        description: description,
       });
 
-      
+      await transporter.sendMail({
+        from: `Support Team <${process.env.EMAIL_ID}>`,
+        to: user.email,
+        subject,
+        html: emailHtml,
+      });
 
       res.status(200).json({
         id: complaintId,
@@ -1922,6 +2008,7 @@ console.log("Render template data:", {
         description,
         image,
         status: "pending",
+        priority,
         latitude,
         longitude,
         createdAt: new Date(),
@@ -1933,75 +2020,261 @@ console.log("Render template data:", {
   }
 );
 
-// router.get("/complaints/:id", async (req, res) => {
-//   const complaintId = parseInt(req.params.id, 10);
 
-//   if (isNaN(complaintId)) {
-//     return res.status(400).json({ message: "Invalid complaint ID" });
-//   }
+// router.post(
+//   "/complaints",
+//   upload.single("image"),
+//   authenticateToken,
+//   checkPermission("complaint_management", "enable", "create"),
+//   async (req, res) => {
+//     try {
+//       const {
+//         categories,
+//         subcategory,
+//         description,
+//         mobile,
+//         address,
+//         latitude: latRaw,
+//         longitude: longRaw,
+//          priority: priorityRaw,
+//       } = req.body;
 
-//   try {
-//     const [rows] = await pool.execute(
-//       `SELECT c.*, cat.category_name, sub.subcategory_name, u.name as user_name 
-//        FROM complaints c
-//        LEFT JOIN category cat ON c.categories = cat.id
-//        LEFT JOIN subcategory sub ON c.subcategory = sub.id
-//        LEFT JOIN users u ON c.user_id = u.id
-//        WHERE c.id = ?`,
-//       [complaintId]
-//     );
+//       const priority = ['Low', 'Medium', 'High'].includes(priorityRaw) ? priorityRaw : 'Medium';
 
-//     if (rows.length === 0) {
-//       return res.status(404).json({ message: "Complaint not found" });
-//     }
+//       const image = req.file ? req.file.filename : null;
+//       const userId = req.user.id;
 
-//     res.status(200).json(rows[0]);
-//   } catch (err) {
-//     console.error("Error fetching complaint:", err);
-//     res.status(500).json({ message: "Internal server error" });
-//   }
+
+//       // Fetch full user details including name
+// const [userRows] = await pool.execute(
+//   "SELECT name, email FROM login WHERE id = ?",
+//   [userId]
+// );
+
+// if (userRows.length === 0) {
+//   return res.status(404).json({ message: "User not found." });
+// }
+
+
+// const user = {
+//   name: userRows[0].name,
+//   email: userRows[0].email,
+// };
+
+
+
+
+//       const latitude =
+//         latRaw !== undefined && latRaw !== "" ? parseFloat(latRaw) : null;
+//       const longitude =
+//         longRaw !== undefined && longRaw !== "" ? parseFloat(longRaw) : null;
+
+//       const sanitize = (val) => (val === undefined || val === "" ? null : val);
+
+//       const categoryId =
+//         categories && categories !== "" ? parseInt(categories) : null;
+//       const subcategoryId =
+//         subcategory && subcategory !== "" ? parseInt(subcategory) : null;
+
+   
+//       const [categoryRows] = await pool.execute(
+//         "SELECT id, category_name FROM category WHERE id = ?",
+//         [categoryId]
+//       );
+//       if (categoryRows.length === 0) {
+//         return res.status(400).json({ message: "Invalid category selected." });
+//       }
+//       const categoryName = categoryRows[0].category_name;
+
+    
+//       const [subRows] = await pool.execute(
+//         "SELECT id FROM subcategory WHERE category_id = ?",
+//         [categoryId]
+//       );
+
+     
+//       if (subRows.length > 0 && !subcategoryId) {
+//         return res
+//           .status(400)
+//           .json({
+//             message: "Subcategory is required for the selected category.",
+//           });
+//       }
+
+//       if (subcategoryId) {
+//         const [validSub] = await pool.execute(
+//           "SELECT id FROM subcategory WHERE id = ? AND category_id = ?",
+//           [subcategoryId, categoryId]
+//         );
+
+//         if (validSub.length === 0) {
+//           return res
+//             .status(400)
+//             .json({ message: "Invalid subcategory for selected category." });
+//         }
+//       }
+
+//       // Prepare the database parameters
+//       const params = [
+//         userId,
+//         sanitize(mobile),
+//         sanitize(address),
+//         categoryId,
+//         subcategoryId,
+//         sanitize(description),
+//         image || null,
+//         "pending",
+//         latitude,
+//         longitude,
+//           priority,
+//       ];
+
+//       const [insertResult] = await pool.execute(
+//         `INSERT INTO complaints 
+//           (user_id, mobile, address, categories, subcategory, description, image, status,priority,latitude, longitude)
+//          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)`,
+//         params
+//       );
+
+//       const complaintId = insertResult.insertId;
+
+// // console.log("req.user:", req.user);
+
+//       // const user = { name: req.user.name, email: req.user.email };
+      
+//         let templateName;
+//       let subject;
+
+//       switch (categoryName.toLowerCase()) {
+//         case "water":
+//           templateName = "complaintWater";
+//           subject = `Water Complaint Registered - Ticket #${complaintId}`;
+//           break;
+//         case "ccms":
+//           templateName = "complaintCCMS";
+//           subject = `Complaint Registered - Ticket #${complaintId}`;
+//           break;
+//         default:
+//           templateName = "complaintOther";
+//           subject = `Your Complaint Has Been Registered - Ticket #${complaintId}`;
+//       }
+
+
+
+// const emailHtml = renderTemplate(templateName, {
+//   userName: user.name,
+//   ticketId: complaintId,
+//   categoryName: categoryName,
+//   description: description,
 // });
 
 
 
-// Route: GET /auth/complaints/:id
 
-// router.get("/complaints/:id", async (req, res) => {
+   
+//       await transporter.sendMail({
+//         from: `Support Team <${process.env.EMAIL_ID}>`,
+//         to: user.email, 
+//         subject: `Your Complaint Has Been Registered - Ticket #${complaintId}`,
+//         html: emailHtml,
+//       });
+
+      
+
+//       res.status(200).json({
+//         id: complaintId,
+//         user_id: userId,
+//         mobile,
+//         address,
+//         categories: categoryId,
+//         subcategory: subcategoryId,
+//         description,
+//         image,
+//         status: "pending",
+//         priority,
+//         latitude,
+//         longitude,
+//         createdAt: new Date(),
+//       });
+//     } catch (err) {
+//       console.error("Error inserting complaint:", err);
+//       res.status(500).json({ message: "Error saving complaint" });
+//     }
+//   }
+// );
+
+// router.put("/complaints/:id/priority", authenticateToken, checkPermission("complaint_management", "enable", "update"), async (req, res) => {
 //   const complaintId = req.params.id;
+//   const { priority } = req.body;  // New priority value
+
+//   const validPriorities = ['Low', 'Medium', 'High'];
+
+//   if (!validPriorities.includes(priority)) {
+//     return res.status(400).json({ message: "Invalid priority value" });
+//   }
 
 //   try {
-//     const [rows] = await pool.execute(
-//       `SELECT 
-//         c.id,
-//         c.description,
-//         c.status,
-//         c.latitude,
-//         c.longitude,
-//         c.mobile,
-//         c.address,
-//         u.name AS user_name,
-//         a.name AS assigned_to_name,
-//         cat.category_name,
-//         sub.subcategory_name
-//       FROM complaints c
-//       LEFT JOIN login u ON u.id = c.user_id          
-//       LEFT JOIN login a ON a.id = c.assigned_to 
-//       LEFT JOIN category cat ON cat.id = c.categories
-//       LEFT JOIN subcategory sub ON sub.id = c.subcategory
-//       WHERE c.id = ?`,
-//       [complaintId]
+//     const [result] = await pool.execute(
+//       `UPDATE complaints SET priority = ? WHERE id = ?`,
+//       [priority, complaintId]
 //     );
 
-//     if (rows.length === 0) {
+//     if (result.affectedRows === 0) {
 //       return res.status(404).json({ message: "Complaint not found" });
 //     }
 
-//     res.json(rows[0]);
+//      await createNotification('Priority Updated', `The priority for complaint ID: ${complaintId} has been updated to ${priority}.`, 'complaint', complaintId);
+
+//     res.status(200).json({ message: "Priority updated", priority });
 //   } catch (err) {
-//     console.error("Error fetching complaint:", err);
-//     res.status(500).json({ message: "Server error" });
+//     console.error("Error updating priority:", err);
+//     res.status(500).json({ message: "Error updating priority" });
 //   }
 // });
+
+router.put("/complaints/:id/priority", authenticateToken, checkPermission("complaint_management", "enable", "update"), async (req, res) => {
+  const complaintId = req.params.id;
+  const { priority } = req.body;  
+
+  const validPriorities = ['Low', 'Medium', 'High'];
+
+
+  if (!validPriorities.includes(priority)) {
+    return res.status(400).json({ message: "Invalid priority value" });
+  }
+
+  try {
+ 
+    const [result] = await pool.execute(
+      `UPDATE complaints SET priority = ? WHERE id = ?`,
+      [priority, complaintId]
+    );
+
+   
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "Complaint not found" });
+    }
+
+   
+    await createNotification(
+      'Priority Updated',
+      `The priority for complaint ID: ${complaintId} has been updated to ${priority}.`,
+      'complaint', 
+      complaintId 
+    );
+
+    
+    res.status(200).json({ message: "Priority updated", priority });
+  } catch (err) {
+    console.error("Error updating priority:", err);
+    res.status(500).json({ message: "Error updating priority" });
+  }
+});
+
+
+
+
+
 
 
 
@@ -2093,37 +2366,6 @@ router.put(
   }
 );
 
-// router.put(
-//   "/complaints/:id/feedback",
-//   authenticateToken,
-//   checkPermission("complaint_management", "enable", "update"),
-//   async (req, res) => {
-//     const complaintId = req.params.id;
-//     const { feedback, rating } = req.body;
-
-//     if (!rating || rating < 1 || rating > 5) {
-//       return res.status(400).json({ message: "Rating must be between 1 and 5" });
-//     }
-
-//     try {
-//       const [result] = await pool.execute(
-//         `UPDATE complaints
-//          SET feedback = ?, rating = ?, feedback_at = NOW()
-//          WHERE id = ? AND status = 'resolved'`,
-//         [feedback, rating, complaintId]
-//       );
-
-//       if (result.affectedRows === 0) {
-//         return res.status(404).json({ message: "Complaint not found or not resolved" });
-//       }
-
-//       res.status(200).json({ message: "Feedback saved" });
-//     } catch (err) {
-//       console.error("Error saving feedback:", err);
-//       res.status(500).json({ message: "Error saving feedback" });
-//     }
-//   }
-// );
 
 router.put(
   "/complaints/:id/feedback",
@@ -2250,5 +2492,18 @@ router.get(
     }
   }
 );
+
+router.get('/notifications', authenticateToken, async (req, res) => {
+  try {
+    
+    const [notifications] = await pool.execute('SELECT * FROM notifications ORDER BY created_at DESC');
+    
+    // Send back the notifications
+    res.status(200).json(notifications);
+  } catch (err) {
+    console.error('Error fetching notifications:', err);
+    res.status(500).json({ message: 'Failed to fetch notifications' });
+  }
+});
 
 export default router;

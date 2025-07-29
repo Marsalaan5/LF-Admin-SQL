@@ -197,7 +197,7 @@ import {
 } from "recharts";
 import { AuthContext } from "../context/AuthContext";
 
-const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#AA00FF"];
+const COLORS = ["#e2b838ff", "#007bff","#17a2b8","#198754", "#dc3545", "#6c757d"];
 
 function ComplaintCharts() {
   const { token } = useContext(AuthContext);

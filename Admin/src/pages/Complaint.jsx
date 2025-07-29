@@ -36,7 +36,7 @@ function Complaint() {
     if (user?.role) fetchCategories();
   }, [token, user?.role]);
 
-  // Fetch subcategories if the selected category supports it
+
   useEffect(() => {
     const fetchSubcategories = async () => {
       if (!categories) {

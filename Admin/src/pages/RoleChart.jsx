@@ -8,7 +8,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#AA00FF"];
+const COLORS = ["#0088FE", "#c42700ff", "#ff289eff", "#42ff4bff", "#00ffffff","#ff8019ff"];
 
 function RoleDistributionChart({ users }) {
   // Prepare data for pie chart

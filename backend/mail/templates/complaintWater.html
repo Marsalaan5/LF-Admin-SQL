@@ -1,4 +1,4 @@
-<table style="font-family: Arial; width: 100%; border: 1px solid #ccc; padding: 20px;">
+<!-- <table style="font-family: Arial; width: 100%; border: 1px solid #ccc; padding: 20px;">
   <td style="text-align: center; padding-bottom: 20px;">
       <img src="https://yourdomain.com/path-to-logo.png" alt="Water Logo" style="max-width: 150px; height: auto;" />
     </td>
@@ -11,4 +11,64 @@
     <p>Our team is working to resolve it at the earliest.</p>
   </td></tr>
   <tr><td><p>Thank you,<br/>Water Department,Livefibre</p></td></tr>
+</table>
+
+ -->
+
+
+
+
+ <table style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; width: 100%; background: #f5f7fa; padding: 50px 0;">
+  <tr>
+    <td align="center">
+      <table style="width: 600px; background: #fff; border-radius: 14px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1); overflow: hidden;">
+
+        <!-- Header with gradient and logos -->
+        <tr>
+          <td style="background: linear-gradient(90deg, #1abc9c, #16a085); padding: 30px 40px; display: flex; justify-content: center; gap: 40px; align-items: center;">
+            <img src="https://yourdomain.com/path-to-logo.png" alt="Company Logo" style="max-width: 130px; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.15);" />
+            <!-- If you have a category logo, add it here, else remove this line -->
+            <img src="https://yourdomain.com/path-to-category-logo.png" alt="{{categoryName}} Logo" style="max-width: 80px; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.15);" />
+          </td>
+        </tr>
+
+        <!-- Title -->
+        <tr>
+          <td style="padding: 40px 50px 10px; text-align: center;">
+            <h1 style="color: #16a085; font-weight: 700; font-size: 32px; margin: 0 0 10px;">Water Service Complaint Acknowledgment</h1>
+            <p style="color: #4a5568; font-size: 17px; margin: 0;">Thank you for reaching out to the Water Department</p>
+          </td>
+        </tr>
+
+        <!-- Body content -->
+        <tr>
+          <td style="padding: 20px 50px 40px; color: #34495e; font-size: 16px; line-height: 1.6;">
+            <p>Hi <strong>{{userName}}</strong>,</p>
+            <p>We've received your complaint about water services under the category <strong>{{categoryName}}</strong>.</p>
+            <p>Your Complaint ID is: <strong style="color: #2980b9; font-weight: 700;">{{ticketId}}</strong></p>
+            <p>Our team is working to resolve it at the earliest.</p>
+          </td>
+        </tr>
+
+        <!-- Call to Action Button -->
+        <tr>
+          <td style="text-align: center; padding-bottom: 40px;">
+            <a href="https://localhost:5173/" 
+               style="display: inline-block; background: #16a085; color: #fff; text-decoration: none; font-weight: 600; padding: 14px 36px; border-radius: 30px; font-size: 16px; box-shadow: 0 5px 15px rgba(22, 160, 133, 0.4); transition: background-color 0.3s ease;">
+               Visit Our Portal
+            </a>
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="padding: 20px 50px 30px; border-top: 1px solid #e2e8f0; color: #a0aec0; font-size: 14px; text-align: center;">
+            Regards,<br />
+            <strong>Water Department, Company Name</strong>
+          </td>
+        </tr>
+
+      </table>
+    </td>
+  </tr>
 </table>

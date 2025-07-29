@@ -1059,6 +1059,8 @@ const fixedRoles = [
     label: "Water Department",
     image: "/register/meter.png",
     backgroundImage: "/register/water.jpg",
+     quote: "Managing urban water needs made smarter.",
+  
  
   },
   {
@@ -1066,6 +1068,8 @@ const fixedRoles = [
     label: "City Control Mgmt",
     image: "/register/ccms.jpg",
     backgroundImage: "/register/ccms.jpg",
+    quote: "Smarter cities start with smarter control systems.",
+   
     
   },
 

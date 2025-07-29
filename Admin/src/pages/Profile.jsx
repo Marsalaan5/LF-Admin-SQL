@@ -143,9 +143,17 @@ function Profile() {
         },
       }
     );
-
     // response.data now contains the updated user info (without password)
     setUser(response.data);
+
+
+
+setFormData({
+name:response.data.name
+
+})
+
+
 
     setFormData({
       name: response.data.name,
