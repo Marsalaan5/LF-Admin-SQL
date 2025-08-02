@@ -1032,8 +1032,8 @@ useEffect(() => {
               <div className="d-flex justify-content-between">
                 <span>{activity.message}</span>
                 <small className="text-muted">
-                  {dayjs(activity.timestamp).isValid()
-                    ? dayjs(activity.timestamp).format('YYYY-MM-DD HH:mm:ss')
+                  {dayjs(activity.createdAt).isValid()
+                    ? dayjs(activity.createdAt).format('YYYY-MM-DD HH:mm:ss')
                     : 'Invalid date'}
                 </small>
               </div>

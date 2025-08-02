@@ -1984,6 +1984,20 @@ await createNotification(
   complaintId,
   userId
 );
+
+
+      await pool.execute(
+  `INSERT INTO activities (type, message, user_id) VALUES (?, ?, ?)`,
+  [
+    "complaint",
+    `New complaint has been registered with Ticket #${complaintId} in category: ${categoryName}`,
+    userId
+  ]
+);
+
+
+
+
       let templateName;
       let subject;
 
@@ -2261,6 +2275,15 @@ router.put(
         `The priority for complaint ID: ${complaintId} has been updated to ${priority}.`,
         "complaint",
         complaintId
+      );
+
+       await pool.execute(
+        `INSERT INTO activities (type, message, user_id) VALUES (?, ?, ?)`,
+        [
+          "priority",
+          `Complaint #${complaintId} priority change to ${priority}`,
+          complaintId
+        ]
       );
 
       res.status(200).json({ message: "Priority updated", priority });
@@ -2703,38 +2726,70 @@ router.put("/notifications/:id/read", authenticateToken,
 
 
 
-// GET /auth/recent-activities
+// // GET /auth/recent-activities
+// router.get('/recent-activities', 
+//   //  checkPermission("recent_activity", "enable", "view"),
+//   authenticateToken, async (req, res) => {
+//   try {
+//     const user = req.user;
+//     let activitiesQuery = '';
+//     let params = [];
+
+//     if (user.role === 'Super Admin' || user.role === 'Admin') {
+//       activitiesQuery = `
+//         SELECT * FROM activities
+//         ORDER BY createdAt DESC
+//         LIMIT 20
+//       `;
+//     } else {
+//       activitiesQuery = `
+//         SELECT * FROM activities
+//         WHERE user_id = ?
+//         ORDER BY createdAt DESC
+//         LIMIT 20
+//       `;
+//       params = [user.id];
+//     }
+
+//     const [activities] = await pool.execute(activitiesQuery, params);
+//     res.status(200).json(activities);
+//   } catch (error) {
+//     console.error("Error fetching recent activities:", error);
+//     res.status(500).json({ message: 'Failed to fetch recent activities.' });
+//   }
+// });
+
+
 router.get('/recent-activities', 
-  //  checkPermission("recent_activity", "enable", "view"),
-  authenticateToken, async (req, res) => {
-  try {
-    const user = req.user;
-    let activitiesQuery = '';
-    let params = [];
+  // checkPermission("recent_activity", "enable", "view"),
+  authenticateToken, 
+  async (req, res) => {
+    try {
+      const user = req.user;
+      let query = `
+        SELECT id, type, message, user_id, createdAt 
+        FROM activities
+      `;
+      const params = [];
 
-    if (user.role === 'Super Admin' || user.role === 'Admin') {
-      activitiesQuery = `
-        SELECT * FROM activities
-        ORDER BY createdAt DESC
-        LIMIT 20
-      `;
-    } else {
-      activitiesQuery = `
-        SELECT * FROM activities
-        WHERE user_id = ?
-        ORDER BY createdAt DESC
-        LIMIT 20
-      `;
-      params = [user.id];
+      if (!(user.role === 'Super Admin' || user.role === 'Admin')) {
+        query += ` WHERE user_id = ?`;
+        params.push(user.id);
+      }
+
+      query += ` ORDER BY createdAt DESC LIMIT 20`;
+
+      const [activities] = await pool.execute(query, params);
+      
+      res.status(200).json(activities);
+    } catch (error) {
+      console.error("Error fetching recent activities:", error);
+      res.status(500).json({ message: 'Failed to fetch recent activities.' });
     }
-
-    const [activities] = await pool.execute(activitiesQuery, params);
-    res.status(200).json(activities);
-  } catch (error) {
-    console.error("Error fetching recent activities:", error);
-    res.status(500).json({ message: 'Failed to fetch recent activities.' });
-  }
 });
+
+
+
 
 
 // router.get(
