@@ -18,9 +18,12 @@ import Joi from "joi";
 import nodemailer from "nodemailer";
 import getAllowedRegistrationRoles from "../services/roleServices.js";
 import Handlebars from "handlebars";
-import { transporter,renderTemplate,sendComplaintEmail } from "../mail/mailer.js"; 
+import {
+  transporter,
+  renderTemplate,
+  sendComplaintEmail,
+} from "../mail/mailer.js";
 // import createNotification from "../services/notificationService.js";
-
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -69,18 +72,26 @@ function organizeMenu(menuItems, parentId = null) {
     }));
 }
 
-const createNotification = async (type, message, relatedEntity, entityId) => {
+const createNotification = async (userId,type, message, relatedEntity, entityId) => {
   try {
-   
+
+// const userId = req.user?.id;
+
+
     await pool.execute(
-      "INSERT INTO notifications (type, message, related_entity, entity_id) VALUES (?, ?, ?, ?)",
-      [type, message, relatedEntity, entityId]
+      "INSERT INTO notifications (user_id,type, message, related_entity, entity_id) VALUES (?,?, ?, ?, ?)",
+      [userId,type, message, relatedEntity, entityId]
     );
 
-   
-    const notification = { type, message, relatedEntity, entityId, created_at: new Date() };
-    io.emit('notification', notification); 
-
+    const notification = {
+      userId,
+      type,
+      message,
+      relatedEntity,
+      entityId,
+      created_at: new Date(),
+    };
+    io.emit("new-notification", notification);
   } catch (err) {
     console.error("Error creating notification:", err);
   }
@@ -221,12 +232,11 @@ router.post(
   // authenticateToken,
   upload.single("image"),
   async (req, res) => {
-    // Image validation
+
     if (req.fileValidationError) {
       return res.status(400).json({ message: req.fileValidationError });
     }
 
-    // Validate body with Joi
     const { error, value } = registerSchema.validate(req.body);
     if (error) {
       return res.status(400).json({ message: error.details[0].message });
@@ -254,7 +264,7 @@ router.post(
       }
       const roleId = roleResult[0].id;
 
-      // Check for existing user
+      
       const [existingUser] = await pool.execute(
         "SELECT * FROM login WHERE email = ?",
         [email]
@@ -263,7 +273,7 @@ router.post(
         return res.status(409).json({ message: "User already exists" });
       }
 
-      // Hash password
+      
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(password, salt);
 
@@ -274,6 +284,14 @@ router.post(
       );
 
       io.emit("new-signup", { name, email });
+
+      await createNotification(
+ "New User Registered",
+  
+  "A new user has been registered.",
+  "user",
+   result.insertId,
+);
 
       // Audit log
       // const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -544,7 +562,6 @@ router.post("/forgot-password", async (req, res) => {
     );
 
     const resetLink = `http://localhost:5173/reset-password/${token}`;
-
 
     await transporter.sendMail({
       to: email,
@@ -1265,7 +1282,6 @@ router.post(
   }
 );
 
-
 router.post(
   "/reorder",
   authenticateToken,
@@ -1301,7 +1317,6 @@ router.post(
     }
   }
 );
-
 
 router.put(
   "/menu/:id",
@@ -1570,14 +1585,12 @@ router.post(
         "INSERT INTO subcategory (category_id, subcategory_name, description) VALUES (?, ?, ?)",
         [categoryId, subcategory_name, description]
       );
-      res
-        .status(201)
-        .json({
-          id: result.insertId,
-          subcategory_name,
-          description,
-          category_id: categoryId,
-        });
+      res.status(201).json({
+        id: result.insertId,
+        subcategory_name,
+        description,
+        category_id: categoryId,
+      });
     } catch (error) {
       console.error("Error creating subcategory:", error);
       res.status(500).json({ error: "Error creating subcategory" });
@@ -1685,8 +1698,6 @@ router.delete(
   }
 );
 
-
-
 //complaints
 
 // router.get(
@@ -1699,10 +1710,10 @@ router.delete(
 //       const role = req.user.role;
 
 //       let query = `
-//         SELECT 
-//           c.*, 
-//           cat.category_name, 
-//           sub.subcategory_name 
+//         SELECT
+//           c.*,
+//           cat.category_name,
+//           sub.subcategory_name
 //         FROM complaints c
 //         LEFT JOIN category cat ON c.categories = cat.id
 //         LEFT JOIN subcategory sub ON c.subcategory = sub.id`;
@@ -1725,7 +1736,6 @@ router.delete(
 //   }
 // );
 
-
 router.get(
   "/complaints",
   authenticateToken,
@@ -1734,7 +1744,7 @@ router.get(
     try {
       const userId = req.user.id;
       const role = req.user.role;
-      const { priority } = req.query;  // <-- new param
+      const { priority } = req.query; // <-- new param
 
       let query = `
         SELECT 
@@ -1752,7 +1762,7 @@ router.get(
         conditions.push(`c.user_id = ?`);
         params.push(userId);
       }
-      
+
       if (priority) {
         conditions.push(`c.priority = ?`);
         params.push(priority);
@@ -1774,14 +1784,12 @@ router.get(
   }
 );
 
-
 router.get(
   "/complaints/status-options",
   authenticateToken,
   checkPermission("complaint_management", "enable", "view"),
   async (req, res) => {
     try {
-      
       const [rows] = await pool.execute(`
         SELECT COLUMN_TYPE 
         FROM INFORMATION_SCHEMA.COLUMNS 
@@ -1792,7 +1800,6 @@ router.get(
         return res.status(500).json({ message: "Status column not found" });
       }
 
-     
       const enumStr = rows[0].COLUMN_TYPE;
       const matches = enumStr.match(/enum\((.*)\)/i);
 
@@ -1812,7 +1819,6 @@ router.get(
     }
   }
 );
-
 
 router.get(
   "/complaints/:id",
@@ -1857,7 +1863,6 @@ router.get(
   }
 );
 
-
 router.post(
   "/complaints",
   upload.single("image"),
@@ -1876,7 +1881,9 @@ router.post(
         priority: priorityRaw,
       } = req.body;
 
-      const priority = ['Low', 'Medium', 'High'].includes(priorityRaw) ? priorityRaw : 'Medium';
+      const priority = ["Low", "Medium", "High"].includes(priorityRaw)
+        ? priorityRaw
+        : "Medium";
 
       const image = req.file ? req.file.filename : null;
       const userId = req.user.id;
@@ -1923,11 +1930,9 @@ router.post(
       );
 
       if (subRows.length > 0 && !subcategoryId) {
-        return res
-          .status(400)
-          .json({
-            message: "Subcategory is required for the selected category.",
-          });
+        return res.status(400).json({
+          message: "Subcategory is required for the selected category.",
+        });
       }
 
       if (subcategoryId) {
@@ -1942,6 +1947,8 @@ router.post(
             .json({ message: "Invalid subcategory for selected category." });
         }
       }
+
+
 
       // Prepare the database parameters
       const params = [
@@ -1965,8 +1972,18 @@ router.post(
         params
       );
 
-      const complaintId = insertResult.insertId;
+    const complaintId = insertResult.insertId;
 
+
+
+await createNotification(
+ "New Complaint Registered",
+  
+  `A new complaint has been registered with Ticket #${complaintId} in category: ${categoryName}.`,
+  "complaint",
+  complaintId,
+  userId
+);
       let templateName;
       let subject;
 
@@ -2020,7 +2037,6 @@ router.post(
   }
 );
 
-
 // router.post(
 //   "/complaints",
 //   upload.single("image"),
@@ -2044,7 +2060,6 @@ router.post(
 //       const image = req.file ? req.file.filename : null;
 //       const userId = req.user.id;
 
-
 //       // Fetch full user details including name
 // const [userRows] = await pool.execute(
 //   "SELECT name, email FROM login WHERE id = ?",
@@ -2055,14 +2070,10 @@ router.post(
 //   return res.status(404).json({ message: "User not found." });
 // }
 
-
 // const user = {
 //   name: userRows[0].name,
 //   email: userRows[0].email,
 // };
-
-
-
 
 //       const latitude =
 //         latRaw !== undefined && latRaw !== "" ? parseFloat(latRaw) : null;
@@ -2076,7 +2087,6 @@ router.post(
 //       const subcategoryId =
 //         subcategory && subcategory !== "" ? parseInt(subcategory) : null;
 
-   
 //       const [categoryRows] = await pool.execute(
 //         "SELECT id, category_name FROM category WHERE id = ?",
 //         [categoryId]
@@ -2086,13 +2096,11 @@ router.post(
 //       }
 //       const categoryName = categoryRows[0].category_name;
 
-    
 //       const [subRows] = await pool.execute(
 //         "SELECT id FROM subcategory WHERE category_id = ?",
 //         [categoryId]
 //       );
 
-     
 //       if (subRows.length > 0 && !subcategoryId) {
 //         return res
 //           .status(400)
@@ -2130,7 +2138,7 @@ router.post(
 //       ];
 
 //       const [insertResult] = await pool.execute(
-//         `INSERT INTO complaints 
+//         `INSERT INTO complaints
 //           (user_id, mobile, address, categories, subcategory, description, image, status,priority,latitude, longitude)
 //          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)`,
 //         params
@@ -2141,7 +2149,7 @@ router.post(
 // // console.log("req.user:", req.user);
 
 //       // const user = { name: req.user.name, email: req.user.email };
-      
+
 //         let templateName;
 //       let subject;
 
@@ -2159,8 +2167,6 @@ router.post(
 //           subject = `Your Complaint Has Been Registered - Ticket #${complaintId}`;
 //       }
 
-
-
 // const emailHtml = renderTemplate(templateName, {
 //   userName: user.name,
 //   ticketId: complaintId,
@@ -2168,18 +2174,12 @@ router.post(
 //   description: description,
 // });
 
-
-
-
-   
 //       await transporter.sendMail({
 //         from: `Support Team <${process.env.EMAIL_ID}>`,
-//         to: user.email, 
+//         to: user.email,
 //         subject: `Your Complaint Has Been Registered - Ticket #${complaintId}`,
 //         html: emailHtml,
 //       });
-
-      
 
 //       res.status(200).json({
 //         id: complaintId,
@@ -2232,51 +2232,44 @@ router.post(
 //   }
 // });
 
-router.put("/complaints/:id/priority", authenticateToken, checkPermission("complaint_management", "enable", "update"), async (req, res) => {
-  const complaintId = req.params.id;
-  const { priority } = req.body;  
+router.put(
+  "/complaints/:id/priority",
+  authenticateToken,
+  checkPermission("complaint_management", "enable", "update"),
+  async (req, res) => {
+    const complaintId = req.params.id;
+    const { priority } = req.body;
 
-  const validPriorities = ['Low', 'Medium', 'High'];
+    const validPriorities = ["Low", "Medium", "High"];
 
-
-  if (!validPriorities.includes(priority)) {
-    return res.status(400).json({ message: "Invalid priority value" });
-  }
-
-  try {
- 
-    const [result] = await pool.execute(
-      `UPDATE complaints SET priority = ? WHERE id = ?`,
-      [priority, complaintId]
-    );
-
-   
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ message: "Complaint not found" });
+    if (!validPriorities.includes(priority)) {
+      return res.status(400).json({ message: "Invalid priority value" });
     }
 
-   
-    await createNotification(
-      'Priority Updated',
-      `The priority for complaint ID: ${complaintId} has been updated to ${priority}.`,
-      'complaint', 
-      complaintId 
-    );
+    try {
+      const [result] = await pool.execute(
+        `UPDATE complaints SET priority = ? WHERE id = ?`,
+        [priority, complaintId]
+      );
 
-    
-    res.status(200).json({ message: "Priority updated", priority });
-  } catch (err) {
-    console.error("Error updating priority:", err);
-    res.status(500).json({ message: "Error updating priority" });
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ message: "Complaint not found" });
+      }
+
+      await createNotification(
+        "Priority Updated",
+        `The priority for complaint ID: ${complaintId} has been updated to ${priority}.`,
+        "complaint",
+        complaintId
+      );
+
+      res.status(200).json({ message: "Priority updated", priority });
+    } catch (err) {
+      console.error("Error updating priority:", err);
+      res.status(500).json({ message: "Error updating priority" });
+    }
   }
-});
-
-
-
-
-
-
-
+);
 
 router.put(
   "/complaints/:id/status",
@@ -2322,6 +2315,15 @@ router.put(
         return res.status(404).json({ message: "Complaint not found" });
       }
 
+      await pool.execute(
+        `INSERT INTO activities (type, message, user_id) VALUES (?, ?, ?)`,
+        [
+          "assignment",
+          `Complaint #${complaintId} status changed to ${status}` ,
+          req.user.id,
+        ]
+      );
+
       res.status(200).json({ message: "Status updated", status });
     } catch (err) {
       console.error("Error updating status:", err);
@@ -2329,6 +2331,42 @@ router.put(
     }
   }
 );
+
+// router.put(
+//   "/complaints/:id/assign",
+//   authenticateToken,
+//   checkPermission("complaint_management", "enable", "update"),
+//   async (req, res) => {
+//     const complaintId = req.params.id;
+//     const { assignedToId } = req.body;
+//     const assignedBy = req.user.id;
+
+//     try {
+//       // Check if the user being assigned to exists and is admin/staff
+//       const [userRows] = await pool.execute(
+//         `SELECT id FROM login WHERE id = ? AND role IN ('Admin')`,
+//         [assignedToId]
+//       );
+//       if (userRows.length === 0) {
+//         return res.status(400).json({ message: "Invalid assignee" });
+//       }
+
+//       const [result] = await pool.execute(
+//         `UPDATE complaints SET assigned_to = ?, assigned_by = ?, assigned_at = NOW() WHERE id = ?`,
+//         [assignedToId, assignedBy, complaintId]
+//       );
+
+//       if (result.affectedRows === 0) {
+//         return res.status(404).json({ message: "Complaint not found" });
+//       }
+
+//       res.status(200).json({ message: "Complaint assigned successfully" });
+//     } catch (err) {
+//       console.error("Error assigning complaint:", err);
+//       res.status(500).json({ message: "Failed to assign complaint" });
+//     }
+//   }
+// );
 
 router.put(
   "/complaints/:id/assign",
@@ -2342,12 +2380,14 @@ router.put(
     try {
       // Check if the user being assigned to exists and is admin/staff
       const [userRows] = await pool.execute(
-        `SELECT id FROM login WHERE id = ? AND role IN ('Admin')`,
+        `SELECT id, name FROM login WHERE id = ? AND role IN ('Admin')`,
         [assignedToId]
       );
       if (userRows.length === 0) {
         return res.status(400).json({ message: "Invalid assignee" });
       }
+
+      const assigneeName = userRows[0].name;
 
       const [result] = await pool.execute(
         `UPDATE complaints SET assigned_to = ?, assigned_by = ?, assigned_at = NOW() WHERE id = ?`,
@@ -2357,6 +2397,16 @@ router.put(
       if (result.affectedRows === 0) {
         return res.status(404).json({ message: "Complaint not found" });
       }
+
+    
+      await pool.execute(
+        `INSERT INTO activities (type, message, user_id) VALUES (?, ?, ?)`,
+        [
+          "assignment",
+          `Complaint #${complaintId} assigned to ${assigneeName}`,
+          assignedBy
+        ]
+      );
 
       res.status(200).json({ message: "Complaint assigned successfully" });
     } catch (err) {
@@ -2420,8 +2470,83 @@ router.put(
 
 // complaint dasboard api
 
+// router.get("/complaints/stats/count", authenticateToken, async (req, res) => {
+//   const { period } = req.query; // 'day', 'week', 'month'
+//   let groupBy = "DATE(created_at)";
+//   if (period === "week") groupBy = "YEARWEEK(created_at)";
+//   else if (period === "month") groupBy = "DATE_FORMAT(created_at, '%Y-%m')";
+
+//   try {
+//     const [rows] = await pool.execute(`
+//       SELECT ${groupBy} AS period, COUNT(*) AS count
+//       FROM complaints
+//       GROUP BY ${groupBy}
+//       ORDER BY ${groupBy}
+//     `);
+//     res.json(rows);
+//   } catch (err) {
+//     console.error("Stats error:", err);
+//     res.status(500).json({ message: "Error fetching stats" });
+//   }
+// });
+
+// router.get("/complaints/stats/status", authenticateToken, async (req, res) => {
+//   try {
+//     const [rows] = await pool.execute(`
+//       SELECT status, COUNT(*) AS count
+//       FROM complaints
+//       GROUP BY status
+//     `);
+//     res.json(rows);
+//   } catch (err) {
+//     res.status(500).json({ message: "Error retrieving status stats" });
+//   }
+// });
+
+// router.get(
+//   "/complaints/stats/resolution-time",
+//   authenticateToken,
+//   async (req, res) => {
+//     try {
+//       const [rows] = await pool.execute(`
+//       SELECT 
+//         DATE(created_at) AS date,
+//         AVG(TIMESTAMPDIFF(HOUR, created_at, feedback_at)) AS avg_hours
+//       FROM complaints
+//       WHERE feedback_at IS NOT NULL
+//       GROUP BY DATE(created_at)
+//     `);
+//       res.json(rows);
+//     } catch (err) {
+//       res.status(500).json({ message: "Error calculating resolution time" });
+//     }
+//   }
+// );
+
+// router.get(
+//   "/complaints/stats/categories",
+//   authenticateToken,
+//   async (req, res) => {
+//     try {
+//       const [rows] = await pool.execute(`
+//       SELECT c.category_name, COUNT(*) AS count
+//       FROM complaints cp
+//       JOIN category c ON cp.categories = c.id
+//       GROUP BY cp.categories
+//       ORDER BY count DESC
+//       LIMIT 5
+//     `);
+//       res.json(rows);
+//     } catch (err) {
+//       res.status(500).json({ message: "Error fetching category stats" });
+//     }
+//   }
+// );
+
+
 router.get("/complaints/stats/count", authenticateToken, async (req, res) => {
-  const { period } = req.query; // 'day', 'week', 'month'
+  const userId = req.user.id;  // get user id from token
+  const { period } = req.query;
   let groupBy = "DATE(created_at)";
   if (period === "week") groupBy = "YEARWEEK(created_at)";
   else if (period === "month") groupBy = "DATE_FORMAT(created_at, '%Y-%m')";
@@ -2430,9 +2555,10 @@ router.get("/complaints/stats/count", authenticateToken, async (req, res) => {
     const [rows] = await pool.execute(`
       SELECT ${groupBy} AS period, COUNT(*) AS count
       FROM complaints
+      WHERE user_id = ?
       GROUP BY ${groupBy}
       ORDER BY ${groupBy}
-    `);
+    `, [userId]);
     res.json(rows);
   } catch (err) {
     console.error("Stats error:", err);
@@ -2441,69 +2567,206 @@ router.get("/complaints/stats/count", authenticateToken, async (req, res) => {
 });
 
 router.get("/complaints/stats/status", authenticateToken, async (req, res) => {
+  const userId = req.user.id;
+
   try {
     const [rows] = await pool.execute(`
       SELECT status, COUNT(*) AS count
       FROM complaints
+      WHERE user_id = ?
       GROUP BY status
-    `);
+    `, [userId]);
     res.json(rows);
   } catch (err) {
     res.status(500).json({ message: "Error retrieving status stats" });
   }
 });
 
-router.get(
-  "/complaints/stats/resolution-time",
-  authenticateToken,
-  async (req, res) => {
-    try {
-      const [rows] = await pool.execute(`
+router.get("/complaints/stats/resolution-time", authenticateToken, async (req, res) => {
+  const userId = req.user.id;
+
+  try {
+    const [rows] = await pool.execute(`
       SELECT 
         DATE(created_at) AS date,
         AVG(TIMESTAMPDIFF(HOUR, created_at, feedback_at)) AS avg_hours
       FROM complaints
-      WHERE feedback_at IS NOT NULL
+      WHERE feedback_at IS NOT NULL AND user_id = ?
       GROUP BY DATE(created_at)
-    `);
-      res.json(rows);
-    } catch (err) {
-      res.status(500).json({ message: "Error calculating resolution time" });
-    }
+    `, [userId]);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ message: "Error calculating resolution time" });
   }
-);
+});
 
-router.get(
-  "/complaints/stats/categories",
-  authenticateToken,
-  async (req, res) => {
-    try {
-      const [rows] = await pool.execute(`
+router.get("/complaints/stats/categories", authenticateToken, async (req, res) => {
+  const userId = req.user.id;
+
+  try {
+    const [rows] = await pool.execute(`
       SELECT c.category_name, COUNT(*) AS count
       FROM complaints cp
       JOIN category c ON cp.categories = c.id
+      WHERE cp.user_id = ?
       GROUP BY cp.categories
       ORDER BY count DESC
       LIMIT 5
-    `);
-      res.json(rows);
-    } catch (err) {
-      res.status(500).json({ message: "Error fetching category stats" });
-    }
-  }
-);
-
-router.get('/notifications', authenticateToken, async (req, res) => {
-  try {
-    
-    const [notifications] = await pool.execute('SELECT * FROM notifications ORDER BY created_at DESC');
-    
-    // Send back the notifications
-    res.status(200).json(notifications);
+    `, [userId]);
+    res.json(rows);
   } catch (err) {
-    console.error('Error fetching notifications:', err);
-    res.status(500).json({ message: 'Failed to fetch notifications' });
+    res.status(500).json({ message: "Error fetching category stats" });
   }
 });
+
+
+// router.get("/notifications", authenticateToken, async (req, res) => {
+//   try {
+//     const [notifications] = await pool.execute(
+//       "SELECT * FROM notifications ORDER BY created_at DESC"
+//     );
+
+//     // Send back the notifications
+//     res.status(200).json(notifications);
+//   } catch (err) {
+//     console.error("Error fetching notifications:", err);
+//     res.status(500).json({ message: "Failed to fetch notifications" });
+//   }
+// });
+
+
+
+// router.get("/notifications", authenticateToken, async (req, res) => {
+//   try {
+//     // Limiting to the latest 5 notifications
+//     const [notifications] = await pool.execute(
+//       "SELECT * FROM notifications ORDER BY created_at DESC LIMIT 5"
+//     );
+
+//     // Send back the notifications
+//     res.status(200).json(notifications);
+//   } catch (err) {
+//     console.error("Error fetching notifications:", err);
+//     res.status(500).json({ message: "Failed to fetch notifications" });
+//   }
+// });
+
+
+router.get('/notifications', authenticateToken, 
+   checkPermission("complaint_management", "enable", "view"),
+  async (req, res) => {
+  try {
+    
+    const { role, userId } = req.user;
+
+   
+    let query = 'SELECT * FROM notifications';
+    let queryParams = [];
+
+    if (role !== 'Super Admin') {
+    
+      query += ' WHERE user_id = ?';
+      queryParams = [userId];
+    }
+    const [notifications] = await pool.execute(query, queryParams);
+    res.json(notifications);
+
+  } catch (error) {
+    console.error('Error fetching notifications:', error);
+    res.status(500).json({ message: 'Failed to fetch notifications.' });
+  }
+});
+
+
+
+router.put("/notifications/:id/read", authenticateToken, 
+    checkPermission("complaint_management", "enable", "update"),
+    async (req, res) => {
+  const notificationId = req.params.id;
+
+  try {
+    const [result] = await pool.execute(
+      "UPDATE notifications SET read = TRUE WHERE id = ?",
+      [notificationId]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "Notification not found" });
+    }
+
+    res.status(200).json({ message: "Notification marked as read" });
+  } catch (err) {
+    console.error("Error marking notification as read:", err);
+    res.status(500).json({ message: "Failed to mark notification as read" });
+  }
+});
+
+
+
+// GET /auth/recent-activities
+router.get('/recent-activities', 
+  //  checkPermission("recent_activity", "enable", "view"),
+  authenticateToken, async (req, res) => {
+  try {
+    const user = req.user;
+    let activitiesQuery = '';
+    let params = [];
+
+    if (user.role === 'Super Admin' || user.role === 'Admin') {
+      activitiesQuery = `
+        SELECT * FROM activities
+        ORDER BY createdAt DESC
+        LIMIT 20
+      `;
+    } else {
+      activitiesQuery = `
+        SELECT * FROM activities
+        WHERE user_id = ?
+        ORDER BY createdAt DESC
+        LIMIT 20
+      `;
+      params = [user.id];
+    }
+
+    const [activities] = await pool.execute(activitiesQuery, params);
+    res.status(200).json(activities);
+  } catch (error) {
+    console.error("Error fetching recent activities:", error);
+    res.status(500).json({ message: 'Failed to fetch recent activities.' });
+  }
+});
+
+
+// router.get(
+//   '/recent-activities',
+//   authenticateToken,
+//   checkPermission('recent_activity', 'enable', 'view'),
+//   async (req, res) => {
+//     try {
+//       const user = req.user;
+
+//       let activitiesQuery = '';
+//       let params = [];
+
+//       if (user.role === 'Super Admin' || user.role === 'Admin') {
+//         activitiesQuery = `SELECT * FROM activities ORDER BY createdAt DESC LIMIT 20`;
+//       } else {
+//         activitiesQuery = `SELECT * FROM activities WHERE user_id = ? ORDER BY createdAt DESC LIMIT 20`;
+//         params = [user.id];
+//       }
+
+//       const [activities] = await pool.execute(activitiesQuery, params);
+//       res.status(200).json(activities);
+//     } catch (error) {
+//       console.error('Error fetching recent activities:', error);
+//       res.status(500).json({ message: 'Failed to fetch recent activities.' });
+//     }
+//   }
+// );
+
+
+
+
+
 
 export default router;

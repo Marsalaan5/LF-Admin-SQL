@@ -1041,7 +1041,7 @@ function Category() {
   };
 
   return (
-    <Container fluid className="border shadow-sm" style={{ marginTop: "100px", width: "98%" }}>
+    <Container fluid className="border shadow-sm" style={{ marginTop: "100px", width: "98%",borderRadius: '10px'  }}>
       <div className="d-flex justify-content-between align-items-center mt-5 mb-3">
         <div>
           <h3>Category Management</h3>

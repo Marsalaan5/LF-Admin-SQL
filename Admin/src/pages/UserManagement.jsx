@@ -876,6 +876,7 @@ function UserManagement() {
   const [page, setPage] = useState(1);
   const [usersPerPage, setUsersPerPage] = useState(10);
   const [filterStatus, setFilterStatus] = useState("all");
+  const [modalAdd, setModalAdd] = useState(false);
 
   useEffect(() => {
     if (!token) navigate("/login");
@@ -968,11 +969,14 @@ function UserManagement() {
   const statusIcons = { all:"fas fa-users", active:"fas fa-user-check", inactive:"fas fa-user-times" };
   const cardStatusList = ["all","active","inactive"];
 
-  const [modalAdd, setModalAdd] = useState(false);
+
+
+  
 
   return (
-    <Container fluid className="border shadow-sm bg-light rounded" style={{marginTop:"100px", width:"98%"}}>
+    <Container fluid className="border shadow-sm bg-light" style={{marginTop:"100px", width:"98%",borderRadius: '10px' }}>
       <div className="d-flex justify-content-between align-items-center mt-5 mb-3">
+
         <div>
           <h3>User Management</h3>
           <nav aria-label="breadcrumb">
@@ -986,6 +990,7 @@ function UserManagement() {
           <i className="fas fa-plus me-2"></i> Add User
         </Button>
       </div>
+
       {message && <div className="alert alert-info">{message}</div>}
       <Row className="mb-3">
         {cardStatusList.map(k => {
@@ -1011,8 +1016,11 @@ function UserManagement() {
       </Row>
 
       <div className="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2 px-2">
+
         <div><span className="text-muted small">Showing <strong>{idx0+1}</strong> to <strong>{Math.min(idx0 + current.length, filtered.length)}</strong> of <strong>{filtered.length}</strong> users</span></div>
+
         <div className="d-flex align-items-center">
+
           <Form.Label className="me-2 mb-0 small fw-medium text-nowrap">Rows per page:</Form.Label>
           <Form.Select size="sm" style={{width:"100px"}} value={usersPerPage} onChange={e=>{setPage(1); setUsersPerPage(Number(e.target.value));}}>
             {[10,20,50,100].map(n=><option key={n} value={n}>{n}</option>)}
@@ -1021,6 +1029,7 @@ function UserManagement() {
       </div>
 
       <div className="table-responsive mt-4" style={{overflowX:"auto", borderRadius:8, boxShadow:"0 2px 6px rgba(0,0,0,0.1)", backgroundColor:"#f1f3f5"}}>
+
         <Table bordered hover style={{borderCollapse:"separate",borderSpacing:0,width:"100%"}}>
           <thead className="table-primary" style={{borderRadius:"8px 8px 0 0",userSelect:"none"}}>
             <tr>
@@ -1031,6 +1040,7 @@ function UserManagement() {
               ))}
             </tr>
           </thead>
+
           <tbody>
             {current.length === 0 ? (
               <tr><td colSpan="8" style={{textAlign:"center",padding:20,color:"#6c757d",fontStyle:"italic"}}>No users found.</td></tr>
@@ -1058,6 +1068,7 @@ function UserManagement() {
               </tr>
             ))}
           </tbody>
+          
         </Table>
       </div>
 

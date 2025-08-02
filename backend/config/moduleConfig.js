@@ -11,5 +11,7 @@ export default {
   complaint: ["enable", "create","view", "edit", "delete"],
   complaint_management: ["enable", "create","view", "edit", "delete"],
   menu_management: ["enable", "create","view", "edit", "delete"],
+  notification: ["enable", "create","view", "edit", "delete"],
+  // recent_activity: ["enable","view"],
   reports: ["view", "export", "download_pdf"],
 };

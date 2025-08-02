@@ -11,7 +11,7 @@
 //   const [email, setEmail] = useState("");
 //   const [password, setPassword] = useState("");
 //   const [role, setRole] = useState("");
-//   const [mobile, setMobile] = useState("");  // <-- new mobile state
+//   const [mobile, setMobile] = useState("");
 
 //   const navigate = useNavigate();
 //   const { token } = useContext(AuthContext);

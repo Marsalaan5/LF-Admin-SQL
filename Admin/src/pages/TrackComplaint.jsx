@@ -390,7 +390,7 @@ function TrackComplaint() {
     // <div className="container py-5" style={{ maxWidth: "800px" }}>
      <div
       className="container-fluid border shadow-sm"
-      style={{ marginTop: "100px", width: "98%" }}
+      style={{ marginTop: "100px", width: "98%",borderRadius: '10px'  }}
     >
       <div className="d-flex justify-content-between align-items-center mt-5 mb-3">
         <div className="col-sm-6">

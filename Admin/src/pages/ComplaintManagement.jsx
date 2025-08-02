@@ -17,9 +17,9 @@ function ComplaintManagement() {
   const [activeStatus, setActiveStatus] = useState("total");
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedComplaintLocation, setSelectedComplaintLocation] =
-  useState(null);
+    useState(null);
   const [updatedComplaints, setUpdatedComplaints] = useState(complaints);
-  const [isUpdating, setIsUpdating] = useState(false); 
+  const [isUpdating, setIsUpdating] = useState(false);
   const [feedbackModal, setFeedbackModal] = React.useState(null);
   const [rating, setRating] = React.useState("");
   const [feedbackText, setFeedbackText] = React.useState("");
@@ -56,8 +56,6 @@ function ComplaintManagement() {
       setCategoryList([]);
     }
   };
-
-
 
   const fetchSubCategories = async () => {
     try {
@@ -132,7 +130,7 @@ function ComplaintManagement() {
       setFeedbackModal(null);
       setRating("");
       setFeedbackText("");
-      fetchComplaints(); 
+      fetchComplaints();
     } catch (error) {
       toast.error("Failed to submit feedback", error);
     }
@@ -165,47 +163,48 @@ function ComplaintManagement() {
     });
   };
 
-const handlePriorityChange = (complaintId, newPriority) => {
-  // Set isUpdating to true when the update request starts
-  setIsUpdating(true);
+  const handlePriorityChange = (complaintId, newPriority) => {
+    setIsUpdating(true);
 
-  // Save the original priority in case we need to revert the changes later (optimistic UI)
-  const originalPriority = complaints.find((complaint) => complaint.id === complaintId)?.priority;
+    const originalPriority = complaints.find(
+      (complaint) => complaint.id === complaintId
+    )?.priority;
 
-  // Update the priority locally in the state (optimistic UI)
-  const updatedComplaintsList = complaints.map((complaint) =>
-    complaint.id === complaintId ? { ...complaint, priority: newPriority } : complaint
-  );
+    const updatedComplaintsList = complaints.map((complaint) =>
+      complaint.id === complaintId
+        ? { ...complaint, priority: newPriority }
+        : complaint
+    );
 
-  // Set the updated complaints to trigger a re-render
-  setComplaints(updatedComplaintsList);
+    setComplaints(updatedComplaintsList);
 
-  // Make the API call to update the backend
-  axios
-    .put(`http://localhost:5001/auth/complaints/${complaintId}/priority`, { priority: newPriority },{
-      headers: {Authorization : `Bearer ${token}`}
-    })
-    .then((response) => {
-      console.log("Priority updated successfully:", response.data);
+    axios
+      .put(
+        `http://localhost:5001/auth/complaints/${complaintId}/priority`,
+        { priority: newPriority },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      )
+      .then((response) => {
+        console.log("Priority updated successfully:", response.data);
         toast.success("Priority assigned successfully");
-    })
-    .catch((error) => {
-      toast.error("Error updating priority:", error);
+      })
+      .catch((error) => {
+        toast.error("Error updating priority:", error);
 
-      // Revert the priority to the original value in case of an error
-      setComplaints((prevComplaints) =>
-        prevComplaints.map((complaint) =>
-          complaint.id === complaintId ? { ...complaint, priority: originalPriority } : complaint
-        )
-      );
-    })
-    .finally(() => {
-      // Set isUpdating to false once the request is complete (success or failure)
-      setIsUpdating(false);
-    });
-};
-
-
+        setComplaints((prevComplaints) =>
+          prevComplaints.map((complaint) =>
+            complaint.id === complaintId
+              ? { ...complaint, priority: originalPriority }
+              : complaint
+          )
+        );
+      })
+      .finally(() => {
+        setIsUpdating(false);
+      });
+  };
 
   useEffect(() => {
     if (
@@ -215,37 +214,34 @@ const handlePriorityChange = (complaintId, newPriority) => {
     ) {
       validateCategorySubcategoryMapping();
     }
-  }, [complaints, categoryMap, subcategoryMap,]);
+  }, [complaints, categoryMap, subcategoryMap]);
+
+  const visibleComplaints =
+    user?.role === "Super Admin"
+      ? complaints
+      : complaints.filter((c) => c.user_id === user?.id);
+
+  const filteredComplaints =
+    activeStatus === "total"
+      ? visibleComplaints
+      : visibleComplaints.filter(
+          (c) => c.status.toLowerCase() === activeStatus
+        );
+
+  const totalPages = Math.ceil(filteredComplaints.length / complaintsPerPage);
 
 
-const visibleComplaints =
-  user?.role === "Super Admin"
-    ? complaints
-    : complaints.filter((c) => c.user_id === user?.id);
+  const currentComplaint = filteredComplaints.slice(
+    (page - 1) * complaintsPerPage,
+    page * complaintsPerPage
+  );
 
-const filteredComplaints =
-  activeStatus === "total"
-    ? visibleComplaints
-    : visibleComplaints.filter(
-        (c) => c.status.toLowerCase() === activeStatus
-      );
-
-const totalPages = Math.ceil(filteredComplaints.length / complaintsPerPage);
-
-// Paginated current complaints
-const currentComplaint = filteredComplaints.slice(
-  (page - 1) * complaintsPerPage,
-  page * complaintsPerPage
-);
-
-const statusCounts = filteredComplaints.reduce((acc, c) => {
-  const key = c.status.toLowerCase();
-  acc[key] = (acc[key] || 0) + 1;
-  return acc;
-}, {});
-statusCounts.total = filteredComplaints.length;
-
-
+  const statusCounts = filteredComplaints.reduce((acc, c) => {
+    const key = c.status.toLowerCase();
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+  statusCounts.total = filteredComplaints.length;
 
   const statusTextColors = {
     total: "text-dark",
@@ -292,8 +288,8 @@ statusCounts.total = filteredComplaints.length;
 
   return (
     <div
-      className="container-fluid border shadow-sm bg-light rounded"
-      style={{ marginTop: "100px", width: "98%" }}
+      className="container-fluid border shadow-sm bg-light"
+      style={{ marginTop: "100px", width: "98%", borderRadius: "10px" }}
     >
       <div className="d-flex justify-content-between align-items-center mt-5 mb-3">
         <div>
@@ -358,381 +354,414 @@ statusCounts.total = filteredComplaints.length;
         })}
       </div>
 
-
       <div className="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2 px-2">
-  <div>
-    <span className="text-muted small">
-      Showing{" "}
-      <strong>{currentComplaint.length === 0 ? 0 : (page - 1) * complaintsPerPage + 1}</strong> to{" "}
-      <strong>{(page - 1) * complaintsPerPage + currentComplaint.length}</strong> of{" "}
-      <strong>{filteredComplaints.length}</strong> complaints
-    </span>
-  </div>
+        <div>
+          <span className="text-muted small">
+            Showing{" "}
+            <strong>
+              {currentComplaint.length === 0
+                ? 0
+                : (page - 1) * complaintsPerPage + 1}
+            </strong>{" "}
+            to{" "}
+            <strong>
+              {(page - 1) * complaintsPerPage + currentComplaint.length}
+            </strong>{" "}
+            of <strong>{filteredComplaints.length}</strong> complaints
+          </span>
+        </div>
 
-  <div className="d-flex align-items-center">
-    <label className="me-2 mb-0 small fw-medium text-nowrap">Rows per page:</label>
-    <select
-      className="form-select form-select-sm"
-      style={{ width: "100px" }}
-      value={complaintsPerPage}
-      onChange={(e) => {
-        setPage(1);  // Reset to page 1 when rows per page changes
-        setComplaintsPerPage(Number(e.target.value));
-      }}
-    >
-      {[10, 20, 50, 100].map((n) => (
-        <option key={n} value={n}>
-          {n}
-        </option>
-      ))}
-    </select>
-  </div>
-</div>
-
-
-
-<div
-  className="table-responsive mt-4"
-  style={{
-    overflowX: "auto",
-    borderRadius: 8,
-    boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
-    backgroundColor: "#f1f3f5",
-  }}
->
-  <table
-    className="table table-bordered table-hover"
-    style={{ borderCollapse: "separate", borderSpacing: 0, width: "100%" }}
-  >
-    <thead
-      className="table-dark"
-      style={{ borderRadius: "8px 8px 0 0", userSelect: "none" }}
-    >
-      <tr>
-        {[
-          "#",
-          "Ticket ID", 
-          "User",
-          "Mobile",
-          "Address",
-          "Category",
-          "Sub Category",
-          "Description",
-          "Image",
-          "Status",
-          "Priority",
-          "Assigned To",
-          "Action",
-          "Feedback",
-        ].map((header) => (
-          <th
-            key={header}
-            style={{
-              padding: "12px 15px",
-              textAlign: "left",
-              borderBottom: "2px solid #343a40",
-              fontWeight: "600",
-              fontSize: 14,
+        <div className="d-flex align-items-center">
+          <label className="me-2 mb-0 small fw-medium text-nowrap">
+            Rows per page:
+          </label>
+          <select
+            className="form-select form-select-sm"
+            style={{ width: "100px" }}
+            value={complaintsPerPage}
+            onChange={(e) => {
+              setPage(1); // Reset to page 1 when rows per page changes
+              setComplaintsPerPage(Number(e.target.value));
             }}
           >
-            {header}
-          </th>
-        ))}
-      </tr>
-    </thead>
+            {[10, 20, 50, 100].map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
 
-    <tbody>
-      {currentComplaint.length === 0 ? (
-        <tr>
-          <td
-            colSpan="14" 
-            style={{
-              textAlign: "center",
-              padding: 20,
-              color: "#6c757d",
-              fontStyle: "italic",
-            }}
+      <div
+        className="table-responsive mt-4"
+        style={{
+          overflowX: "auto",
+          borderRadius: 8,
+          boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+          backgroundColor: "#f1f3f5",
+        }}
+      >
+        <table
+          className="table table-bordered table-hover"
+          style={{
+            borderCollapse: "separate",
+            borderSpacing: 0,
+            width: "100%",
+          }}
+        >
+          <thead
+            className="table-dark"
+            style={{ borderRadius: "8px 8px 0 0", userSelect: "none" }}
           >
-            No complaints found.
-          </td>
-        </tr>
-      ) : (
-        currentComplaint.map((c, i) => {
-          const rowBg = i % 2 === 0 ? "#f9f9f9" : "white";
-          return (
-            <tr key={c.id} style={{ backgroundColor: rowBg }}>
-              <td style={{ padding: "10px 12px", verticalAlign: "top" }}>
-                {(page - 1) * complaintsPerPage + i + 1}
-              </td>
-              <td style={{ padding: "10px 12px", verticalAlign: "top" }}>
-                {c.id} 
-              </td>
-              <td style={{ padding: "10px 12px", verticalAlign: "top" }}>
-                <div>
-                  <strong>ID:</strong> {c.user_id}
-                </div>
-                <div>
-                  <strong>Name:</strong> {userMap[c.user_id]?.name || "Unknown"}
-                </div>
-              </td>
-              <td style={{ padding: "10px 12px", verticalAlign: "top" }}>{c.mobile}</td>
-              <td
-                style={{
-                  padding: "10px 12px",
-                  verticalAlign: "top",
-                  maxWidth: 220,
-                  wordWrap: "break-word",
-                }}
-              >
-                {c.address}
-              </td>
-              <td style={{ padding: "10px 12px", verticalAlign: "top" }}>
-                {categoryMap[c.categories]?.category_name || "N/A"}
-              </td>
-              <td style={{ padding: "10px 12px", verticalAlign: "top" }}>
-                {c.subcategory && subcategoryMap[c.subcategory] ? (
-                  subcategoryMap[c.subcategory].subcategory_name
-                ) : (
-                  <span style={{ color: "#6c757d" }}>—</span>
-                )}
-              </td>
-              <td
-                style={{
-                  padding: "10px 12px",
-                  verticalAlign: "top",
-                  maxWidth: 220,
-                  wordWrap: "break-word",
-                }}
-              >
-                {c.description}
-              </td>
-              <td
-                style={{
-                  padding: "10px 12px",
-                  verticalAlign: "top",
-                  textAlign: "center",
-                }}
-              >
-                {c.image ? (
-                  <img
-                    src={`http://localhost:5001/auth/uploads/${c.image}`}
-                    alt="Complaint"
-                    style={{
-                      width: 100,
-                      height: 70,
-                      objectFit: "cover",
-                      borderRadius: 6,
-                      cursor: "pointer",
-                      boxShadow: "0 1px 4px rgba(0,0,0,0.1)",
-                      transition: "transform 0.3s ease",
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.1)")}
-                    onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
-                    onClick={() =>
-                      handleImageClick(
-                        `http://localhost:5001/auth/uploads/${c.image}`
-                      )
-                    }
-                  />
-                ) : (
-                  <span style={{ color: "#6c757d" }}>N/A</span>
-                )}
-              </td>
-              <td style={{ padding: "10px 12px", verticalAlign: "top" }}>
-                <span className={getStatusBadgeColor(c.status.toLowerCase())}
+            <tr>
+              {[
+                "#",
+                "Ticket ID",
+                "User",
+                "Mobile",
+                "Address",
+                "Category",
+                "Sub Category",
+                "Description",
+                "Image",
+                "Status",
+                "Priority",
+                "Assigned To",
+                "Action",
+                "Feedback",
+              ].map((header) => (
+                <th
+                  key={header}
                   style={{
-                    display: "inline-block",
-                    padding: "4px 12px",
-                    borderRadius: 20,
-                    fontWeight: "400",
-                    fontSize: 12,
-                    color: "white"
+                    padding: "12px 15px",
+                    textAlign: "left",
+                    borderBottom: "2px solid #343a40",
+                    fontWeight: "600",
+                    fontSize: 14,
                   }}
                 >
-                  {c.status}
-                </span>
-                {user?.role === "Super Admin" && (
-                  <select
-                    value={c.status}
-                    onChange={(e) => handleStatusChange(c.id, e.target.value)}
-                    className="form-select mt-1"
-                    style={{ fontSize: 12, marginTop: 6, width: "100%" }}
-                  >
-                    {statusOptions.map((s) => (
-                      <option key={s.id} value={s.status}>
-                        {s.status}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </td>
+                  {header}
+                </th>
+              ))}
+            </tr>
+          </thead>
 
-
-              <td style={{ padding: "10px 12px", verticalAlign: "top" }}>
-  {user?.role === "Super Admin" ? (
-    <select
-      className="form-select form-select-sm border-primary"
-      value={c.priority || "Medium"}  // default fallback
-      onChange={(e) => handlePriorityChange(c.id, e.target.value)}
-       disabled={isUpdating}
-      style={{ fontSize: 12 }}
-    >
-      {["Low", "Medium", "High"].map((level) => (
-        <option key={level} value={level}>
-          {level}
-        </option>
-      ))}
-    </select>
-  ) : (
-    <span
-      style={{
-        fontWeight: "400",
-        color:
-          c.priority === "High"
-            ? "#dc3545"
-            : c.priority === "Medium"
-            ? "#ffc107"
-            : "#198754",
-      }}
-    >
-      {c.priority || "Medium"}
-    </span>
-  )}
-</td>
-
-
-              <td style={{ padding: "10px 12px", verticalAlign: "top" }}>
-                {user?.role === "Super Admin" ? (
-                  <select
-                    className="form-select form-select-sm border-primary"
-                    value={c.assigned_to || ""}
-                    onChange={(e) => handleAssign(c.id, e.target.value)}
-                    style={{ fontSize: 12 }}
-                  >
-                    <option value="">Unassigned</option>
-                    {users
-                      .filter((u) => ["Admin"].includes(u.role))
-                      .map((u) => (
-                        <option key={u.id} value={u.id}>
-                          {u.name} ({u.role})
-                        </option>
-                      ))}
-                  </select>
-                ) : c.assigned_to ? (
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 6,
-                      fontSize: 12,
-                    }}
-                  >
-                    <i className="fas fa-user-tag" style={{ color: "#0dcaf0" }}></i>
-                    <div>
-                      <strong>{userMap[c.assigned_to]?.name}</strong>
-                      <br />
+          <tbody>
+            {currentComplaint.length === 0 ? (
+              <tr>
+                <td
+                  colSpan="14"
+                  style={{
+                    textAlign: "center",
+                    padding: 20,
+                    color: "#6c757d",
+                    fontStyle: "italic",
+                  }}
+                >
+                  No complaints found.
+                </td>
+              </tr>
+            ) : (
+              currentComplaint.map((c, i) => {
+                const rowBg = i % 2 === 0 ? "#f9f9f9" : "white";
+                return (
+                  <tr key={c.id} style={{ backgroundColor: rowBg }}>
+                    <td style={{ padding: "10px 12px", verticalAlign: "top" }}>
+                      {(page - 1) * complaintsPerPage + i + 1}
+                    </td>
+                    <td style={{ padding: "10px 12px", verticalAlign: "top" }}>
+                      {c.id}
+                    </td>
+                    <td style={{ padding: "10px 12px", verticalAlign: "top" }}>
+                      <div>
+                        <strong>ID:</strong> {c.user_id}
+                      </div>
+                      <div>
+                        <strong>Name:</strong>{" "}
+                        {userMap[c.user_id]?.name || "Unknown"}
+                      </div>
+                    </td>
+                    <td style={{ padding: "10px 12px", verticalAlign: "top" }}>
+                      {c.mobile}
+                    </td>
+                    <td
+                      style={{
+                        padding: "10px 12px",
+                        verticalAlign: "top",
+                        maxWidth: 220,
+                        wordWrap: "break-word",
+                      }}
+                    >
+                      {c.address}
+                    </td>
+                    <td style={{ padding: "10px 12px", verticalAlign: "top" }}>
+                      {categoryMap[c.categories]?.category_name || "N/A"}
+                    </td>
+                    <td style={{ padding: "10px 12px", verticalAlign: "top" }}>
+                      {c.subcategory && subcategoryMap[c.subcategory] ? (
+                        subcategoryMap[c.subcategory].subcategory_name
+                      ) : (
+                        <span style={{ color: "#6c757d" }}>—</span>
+                      )}
+                    </td>
+                    <td
+                      style={{
+                        padding: "10px 12px",
+                        verticalAlign: "top",
+                        maxWidth: 220,
+                        wordWrap: "break-word",
+                      }}
+                    >
+                      {c.description}
+                    </td>
+                    <td
+                      style={{
+                        padding: "10px 12px",
+                        verticalAlign: "top",
+                        textAlign: "center",
+                      }}
+                    >
+                      {c.image ? (
+                        <img
+                          src={`http://localhost:5001/auth/uploads/${c.image}`}
+                          alt="Complaint"
+                          style={{
+                            width: 100,
+                            height: 70,
+                            objectFit: "cover",
+                            borderRadius: 6,
+                            cursor: "pointer",
+                            boxShadow: "0 1px 4px rgba(0,0,0,0.1)",
+                            transition: "transform 0.3s ease",
+                          }}
+                          onMouseEnter={(e) =>
+                            (e.currentTarget.style.transform = "scale(1.1)")
+                          }
+                          onMouseLeave={(e) =>
+                            (e.currentTarget.style.transform = "scale(1)")
+                          }
+                          onClick={() =>
+                            handleImageClick(
+                              `http://localhost:5001/auth/uploads/${c.image}`
+                            )
+                          }
+                        />
+                      ) : (
+                        <span style={{ color: "#6c757d" }}>N/A</span>
+                      )}
+                    </td>
+                    <td style={{ padding: "10px 12px", verticalAlign: "top" }}>
                       <span
+                        className={getStatusBadgeColor(c.status.toLowerCase())}
                         style={{
-                          backgroundColor: "#6c757d",
+                          display: "inline-block",
+                          padding: "4px 12px",
+                          borderRadius: 20,
+                          fontWeight: "400",
+                          fontSize: 12,
                           color: "white",
-                          fontSize: 10,
-                          borderRadius: 4,
-                          padding: "2px 6px",
-                          userSelect: "none",
                         }}
                       >
-                        {userMap[c.assigned_to]?.role}
+                        {c.status}
                       </span>
-                    </div>
-                  </div>
-                ) : (
-                  <span
-                    style={{
-                      color: "#6c757d",
-                      fontStyle: "italic",
-                      fontSize: 12,
-                    }}
-                  >
-                    Not assigned
-                  </span>
-                )}
-              </td>
-              <td style={{ padding: "10px 12px", verticalAlign: "top" , minWidth: 100 }}>
-                <button
-                  className="btn btn-sm me-1"
-                  onClick={() => handleViewUser(c.user_id)}
-                  style={{
-                    fontSize: 14,
-                    background: "none",
-                    border: "none",
-                    color: "#0d6efd",
-                    cursor: "pointer",
-                  }}
-                  title="View User"
-                >
-                  <i className="fas fa-eye"></i>
-                </button>
-                {c.latitude && c.longitude && (
-                  <button
-                    className="btn btn-sm"
-                    onClick={() =>
-                      setSelectedComplaintLocation({
-                        lat: parseFloat(c.latitude),
-                        lng: parseFloat(c.longitude),
-                        address: c.address,
-                      })
-                    }
-                    style={{
-                      fontSize: 14,
-                      background: "none",
-                      border: "none",
-                      color: "#198754",
-                      cursor: "pointer",
-                    }}
-                    title="View Location"
-                  >
-                    <i className="fas fa-map-marker-alt"></i>
-                  </button>
-                )}
-              </td>
-              <td style={{ padding: "10px 12px", verticalAlign: "top", minWidth: 100 }}>
-                {c.status.toLowerCase() === "resolved" &&
-                !c.feedback &&
-                c.user_id === user?.id ? (
-                  <button
-                    className="btn btn-sm btn-outline-success"
-                    onClick={() => setFeedbackModal(c)}
-                    style={{
-                      fontSize: 12,
-                      padding: "4px 8px",
-                      borderRadius: 4,
-                      color: "#198754",
-                      border: "1px solid #198754",
-                      backgroundColor: "transparent",
-                      cursor: "pointer",
-                    }}
-                  >
-                    Give Feedback
-                  </button>
-                ) : c.rating ? (
-                  <div style={{ fontSize: 13, color: "#444" }}>
-                    <span>⭐ {c.rating}/5</span>
-                    <br />
-                    <small>{c.feedback}</small>
-                  </div>
-                ) : (
-                  <span style={{ color: "#6c757d" }}>—</span>
-                )}
-              </td>
-              
-            </tr>
-          );
-        })
-      )}
-    </tbody>
-  </table>
-</div>
+                      {user?.role === "Super Admin" && (
+                        <select
+                          value={c.status}
+                          onChange={(e) =>
+                            handleStatusChange(c.id, e.target.value)
+                          }
+                          className="form-select mt-1"
+                          style={{ fontSize: 12, marginTop: 6, width: "100%" }}
+                        >
+                          {statusOptions.map((s) => (
+                            <option key={s.id} value={s.status}>
+                              {s.status}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </td>
 
+                    <td style={{ padding: "10px 12px", verticalAlign: "top" }}>
+                      {user?.role === "Super Admin" ? (
+                        <select
+                          className="form-select form-select-sm border-primary"
+                          value={c.priority || "Medium"} // default fallback
+                          onChange={(e) =>
+                            handlePriorityChange(c.id, e.target.value)
+                          }
+                          disabled={isUpdating}
+                          style={{ fontSize: 12 }}
+                        >
+                          {["Low", "Medium", "High"].map((level) => (
+                            <option key={level} value={level}>
+                              {level}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span
+                          style={{
+                            fontWeight: "400",
+                            color:
+                              c.priority === "High"
+                                ? "#dc3545"
+                                : c.priority === "Medium"
+                                ? "#ffc107"
+                                : "#198754",
+                          }}
+                        >
+                          {c.priority || "Medium"}
+                        </span>
+                      )}
+                    </td>
+
+                    <td style={{ padding: "10px 12px", verticalAlign: "top" }}>
+                      {user?.role === "Super Admin" ? (
+                        <select
+                          className="form-select form-select-sm border-primary"
+                          value={c.assigned_to || ""}
+                          onChange={(e) => handleAssign(c.id, e.target.value)}
+                          style={{ fontSize: 12 }}
+                        >
+                          <option value="">Unassigned</option>
+                          {users
+                            .filter((u) => ["Admin"].includes(u.role))
+                            .map((u) => (
+                              <option key={u.id} value={u.id}>
+                                {u.name} ({u.role})
+                              </option>
+                            ))}
+                        </select>
+                      ) : c.assigned_to ? (
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 6,
+                            fontSize: 12,
+                          }}
+                        >
+                          <i
+                            className="fas fa-user-tag"
+                            style={{ color: "#0dcaf0" }}
+                          ></i>
+                          <div>
+                            <strong>{userMap[c.assigned_to]?.name}</strong>
+                            <br />
+                            <span
+                              style={{
+                                backgroundColor: "#6c757d",
+                                color: "white",
+                                fontSize: 10,
+                                borderRadius: 4,
+                                padding: "2px 6px",
+                                userSelect: "none",
+                              }}
+                            >
+                              {userMap[c.assigned_to]?.role}
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <span
+                          style={{
+                            color: "#6c757d",
+                            fontStyle: "italic",
+                            fontSize: 12,
+                          }}
+                        >
+                          Not assigned
+                        </span>
+                      )}
+                    </td>
+                    <td
+                      style={{
+                        padding: "10px 12px",
+                        verticalAlign: "top",
+                        minWidth: 100,
+                      }}
+                    >
+                      <button
+                        className="btn btn-sm me-1"
+                        onClick={() => handleViewUser(c.user_id)}
+                        style={{
+                          fontSize: 14,
+                          background: "none",
+                          border: "none",
+                          color: "#0d6efd",
+                          cursor: "pointer",
+                        }}
+                        title="View User"
+                      >
+                        <i className="fas fa-eye"></i>
+                      </button>
+                      {c.latitude && c.longitude && (
+                        <button
+                          className="btn btn-sm"
+                          onClick={() =>
+                            setSelectedComplaintLocation({
+                              lat: parseFloat(c.latitude),
+                              lng: parseFloat(c.longitude),
+                              address: c.address,
+                            })
+                          }
+                          style={{
+                            fontSize: 14,
+                            background: "none",
+                            border: "none",
+                            color: "#198754",
+                            cursor: "pointer",
+                          }}
+                          title="View Location"
+                        >
+                          <i className="fas fa-map-marker-alt"></i>
+                        </button>
+                      )}
+                    </td>
+                    <td
+                      style={{
+                        padding: "10px 12px",
+                        verticalAlign: "top",
+                        minWidth: 100,
+                      }}
+                    >
+                      {c.status.toLowerCase() === "resolved" &&
+                      !c.feedback &&
+                      c.user_id === user?.id ? (
+                        <button
+                          className="btn btn-sm btn-outline-success"
+                          onClick={() => setFeedbackModal(c)}
+                          style={{
+                            fontSize: 12,
+                            padding: "4px 8px",
+                            borderRadius: 4,
+                            color: "#198754",
+                            border: "1px solid #198754",
+                            backgroundColor: "transparent",
+                            cursor: "pointer",
+                          }}
+                        >
+                          Give Feedback
+                        </button>
+                      ) : c.rating ? (
+                        <div style={{ fontSize: 13, color: "#444" }}>
+                          <span>⭐ {c.rating}/5</span>
+                          <br />
+                          <small>{c.feedback}</small>
+                        </div>
+                      ) : (
+                        <span style={{ color: "#6c757d" }}>—</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
 
       {/* Pagination */}
       <Pagination className="d-flex justify-content-center mt-3">

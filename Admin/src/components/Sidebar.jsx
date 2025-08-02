@@ -473,24 +473,24 @@ export default Sidebar;
 //           {/* Flyout submenu on collapsed sidebar (desktop only) */}
 //           {hasChildren && !isOpen && !isMobile && isHovered && (
 //            <div
-  //   onMouseEnter={() => setHoveredItemId(item.id)}
-  //   onMouseLeave={() => setHoveredItemId(null)}
-  //   style={{
-  //     position: "fixed",    
-  //     top: 0,
-  //     left: 70,          
-  //     height: "100vh",
-  //     width: 250,
-  //     paddingTop: 60,    
-  //     backgroundColor: "rgba(11, 108, 179, 0.8)",
-  //     pointerEvents: "auto",
-  //     overflowY: "auto",
-  //     boxShadow: "none",
-  //     display: "flex",
-  //     flexDirection: "column",
-  //     zIndex: 10002,
-  //   }}
-  // >
+//     onMouseEnter={() => setHoveredItemId(item.id)}
+//     onMouseLeave={() => setHoveredItemId(null)}
+//     style={{
+//       position: "fixed",    
+//       top: 0,
+//       left: 70,          
+//       height: "100vh",
+//       width: 250,
+//       paddingTop: 60,    
+//       backgroundColor: "rgba(11, 108, 179, 0.8)",
+//       pointerEvents: "auto",
+//       overflowY: "auto",
+//       boxShadow: "none",
+//       display: "flex",
+//       flexDirection: "column",
+//       zIndex: 10002,
+//     }}
+//   >
 //             {item.children.map((child) => (
 //       <Link
 //         key={child.id}
@@ -516,30 +516,30 @@ export default Sidebar;
 
 //           {/* Mobile collapsed submenu */}
 
-    //  {hasChildren && !isOpen && isMobile && openItems[item.id] && (
-    //       <ul className="nav flex-column ms-3 mt-1">
-    //         {item.children.map((child) => (
-    //           <li key={child.id}>
-    //             <Link
-    //               to={child.path}
-    //               style={{
-    //                 display: "flex",
-    //                 alignItems: "center",
-    //                 color: "white",
-    //                 padding: "6px 10px",
-    //                 textDecoration: "none",
+//      {hasChildren && !isOpen && isMobile && openItems[item.id] && (
+//           <ul className="nav flex-column ms-3 mt-1">
+//             {item.children.map((child) => (
+//               <li key={child.id}>
+//                 <Link
+//                   to={child.path}
+//                   style={{
+//                     display: "flex",
+//                     alignItems: "center",
+//                     color: "white",
+//                     padding: "6px 10px",
+//                     textDecoration: "none",
                    
-    //               }}
+//                   }}
                   
-    //             >
-    //               <i className={`${child.icon} me-2`}></i>
-    //               <span>{child.title}</span>
-    //             </Link>
-    //           </li>
-    //         ))}
-    //       </ul>
-    //     )}
-    //   </li>
+//                 >
+//                   <i className={`${child.icon} me-2`}></i>
+//                   <span>{child.title}</span>
+//                 </Link>
+//               </li>
+//             ))}
+//           </ul>
+//         )}
+//       </li>
 
 
 //       );

@@ -652,7 +652,7 @@ function MenuManagement({ userRole }) {
   return (
     <div
       className="container-fluid  border shadow-sm"
-      style={{ marginTop: "100px", width: "98%" }}
+      style={{ marginTop: "100px", width: "98%",borderRadius: '10px'  }}
     >
       <Toaster />
       <div className="d-flex justify-content-between align-items-center mt-5 mb-3">
@@ -853,7 +853,7 @@ function MenuManagement({ userRole }) {
       ) : menuItems.length === 0 ? (
         <p>No menu items found for your role.</p>
       ) : (
-        <ul className="list-group">
+        <ul className="list-group mb-3">
           {menuItems.map((item) => {
             const itemRoles = Array.isArray(item.roles)
               ? item.roles
