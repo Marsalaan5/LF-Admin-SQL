@@ -1696,7 +1696,7 @@ const fetchUnreadCommentCounts = async () => {
 
 
 const markAsReadAndUpdate = (complaintId) => {
-
+  // Mark notifications as read
   fetch("http://localhost:5001/auth/comments/mark-read", {
     method: "POST",
     headers: {
