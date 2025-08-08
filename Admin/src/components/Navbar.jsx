@@ -18,6 +18,9 @@ function Navbar({ toggleSidebar, isSidebarOpen }) {
   const [searchResults, setSearchResults] = useState([]);
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
+  const unreadCount = notifications.filter(n => !n.is_read).length;
+
+
   const { isLoggedIn, logout, user, token } = useContext(AuthContext);
 
   const navigate = useNavigate();
@@ -56,38 +59,72 @@ function Navbar({ toggleSidebar, isSidebarOpen }) {
     fetchSearchResults(value);
   };
 
-  // useEffect(() => {
-  //   const socket = io("http://localhost:5001");
-  //   socket.on("connect", () => console.log("Connected to socket server"));
-  //   socket.on("new-signup", (data) => {
-  //     setNotifications((prev) => [
-  //       ...prev,
-  //       { message: `New user: ${data.name}` },
-  //     ]);
-  //     toast.success(`New user signed up: ${data.name}`);
-  //   });
-  //   return () => socket.disconnect();
-  // }, []);
+ useEffect(() => {
+  if (!user?.id || !token) return;
+
+  const fetchNotifications = async () => {
+    try {
+      const res = await axios.get("http://localhost:5001/auth/notifications", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setNotifications(res.data);
+    } catch (error) {
+      console.error("Failed to fetch notifications:", error);
+    }
+  };
+
+  fetchNotifications();
+}, [user?.id, token]);
 
 
-  useEffect(() => {
-  const socket = io("http://localhost:5001");
-  socket.on("connect", () => console.log("Connected to socket server"));
+useEffect(() => {
+  if (!user?.id || !token) return;
 
-  socket.on("new-signup", (data) => {
-    const message = `New user signed up: ${data.name}`;
-    setNotifications((prev) => [...prev, { message }]);
-    // toast.success(message);
+  console.log("Connecting socket with userId:", user.id);
+
+  const socket = io("http://localhost:5001", {
+    query: { userId: user.id },
   });
 
-  socket.on("new-notification", (data) => {
- const message = data.message || "You have a new notification";
-    setNotifications((prev) => [...prev, { message }]);
-    // toast.success(message);
-  });
+  socket.on("connect", () =>
+    console.log("Connected to socket server with userId:", user.id)
+  );
+socket.on("new-notification", (data) => {
+  if (data.userId === user.id) {
+    // setNotifications((prev) => [data, ...prev]); 
+    setNotifications((prev) => [data, ...prev]);
+
+
+    toast.success(data.message || "New Notification");
+  } else {
+    console.warn("Notification received for another user:", data);
+  }
+});
+
+  
 
   return () => socket.disconnect();
-}, []);
+}, [user?.id, token]);
+
+
+const markAllAsRead = async () => {
+  try {
+    await axios.put(
+      "http://localhost:5001/auth/notifications/mark-all-read",
+      {},
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    const updated = notifications.map(n => ({ ...n, is_read: true }));
+    setNotifications(updated);
+  } catch (error) {
+    console.error("Failed to mark all as read", error);
+  }
+};
 
 
   return (
@@ -191,52 +228,71 @@ function Navbar({ toggleSidebar, isSidebarOpen }) {
             <button className="btn btn-outline-secondary">
               <i className="fas fa-envelope"></i>
             </button>
-            <div
-              className="position-relative"
-              onClick={handleNotificationClick}
+
+
+            <div className="position-relative" onClick={handleNotificationClick}>
+  <button className="btn btn-outline-secondary position-relative">
+    <i className="fas fa-bell"></i>
+    {unreadCount > 0 && (
+      <span
+        className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+        style={{ fontSize: "0.65rem" }}
+      >
+        {unreadCount}
+      </span>
+    )}
+  </button>
+
+  {showDropdown && (
+    <div
+      className="dropdown-menu show"
+      style={{
+        position: "absolute",
+        right: 0,
+        top: "100%",
+        minWidth: "280px",
+        maxHeight: "300px",
+        overflowY: "auto",
+        zIndex: 1000,
+        backgroundColor: "#fff",
+        borderRadius: "5px",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+      }}
+    >
+      <div className="d-flex justify-content-between align-items-center px-3 py-2">
+        <strong>Notifications</strong>
+        {unreadCount > 0 && (
+          <button
+            className="btn btn-sm btn-link text-primary"
+            onClick={markAllAsRead}
+          >
+            Mark all as read
+          </button>
+        )}
+      </div>
+      <hr className="my-1" />
+      {notifications.length === 0 ? (
+        <span className="dropdown-item text-muted">No Notifications</span>
+      ) : (
+        notifications
+          .slice()
+          // .reverse()
+          .map((n, i) => (
+            <span
+              key={i}
+              className={`dropdown-item ${!n.is_read ? "fw-bold" : ""}`}
             >
-              <button className="btn btn-outline-secondary position-relative">
-                <i className="fas fa-bell"></i>
-                {notifications.length > 0 && (
-                  <span
-                    className="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"
-                    style={{ fontSize: "8px" }}
-                  ></span>
-                )}
-              </button>
-              {showDropdown && (
-                <div
-                  className="dropdown-menu show"
-                  style={{
-                    position: "absolute",
-                    right: 0,
-                    top: "100%",
-                    minWidth: "250px",
-                    maxHeight: "300px",
-                    overflow: "auto",
-                    zIndex: 1000,
-                    backgroundColor: "#fff",
-                    borderRadius: "5px",
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-                  }}
-                >
-                  {notifications.length === 0 ? (
-                    <span className="dropdown-item text-muted">
-                      No Notifications
-                    </span>
-                  ) : (
-                    notifications
-                      .slice()
-                      .reverse()
-                      .map((n, i) => (
-                        <span key={i} className="dropdown-item">
-                          {n.message}
-                        </span>
-                      ))
-                  )}
-                </div>
-              )}
-            </div>
+              {n.message}
+              <div className="text-muted small">
+                {new Date(n.created_at).toLocaleString()}
+              </div>
+            </span>
+          ))
+      )}
+    </div>
+  )}
+</div>
+
             {isLoggedIn ? (
               <div className="dropdown" style={{ position: "relative" }}>
                 <button

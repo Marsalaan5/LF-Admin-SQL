@@ -558,7 +558,7 @@ function RolesManagement() {
   const cellStyle = { padding: "10px 12px", verticalAlign: "top", fontSize: 14 };
 
   return (
-    <Container fluid className="border shadow-sm" style={{ marginTop: "100px", width: "98%",borderRadius: '10px'  }}>
+    <Container fluid className="border shadow-sm bg-light" style={{ marginTop: "100px", width: "98%",borderRadius: '10px'  }}>
       <div className="d-flex justify-content-between align-items-center mt-5 mb-3">
         <div>
           <h3>Role Management</h3>

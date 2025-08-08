@@ -552,6 +552,7 @@ import axios from "axios";
 import RoleChart from "../pages/RoleChart.jsx";
 import ComplaintCharts from '../pages/ComplaintCharts.jsx';
 import ReactDatePicker from "react-datepicker";
+import { Container, Row, Col, Card, Form, Button, Breadcrumb, Alert } from 'react-bootstrap';
 import "react-datepicker/dist/react-datepicker.css";
 
 import { useState, useEffect, useContext, useRef, useMemo } from "react";
@@ -571,8 +572,12 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import dayjs from 'dayjs';
 
+import relativeTime from 'dayjs/plugin/relativeTime';
 
-import { Container, Row, Col, Card, Form, Button, Breadcrumb, Alert } from 'react-bootstrap';
+
+
+
+dayjs.extend(relativeTime);
 
 function Dashboard() {
   const { token, user, permissions } = useContext(AuthContext);
@@ -1018,7 +1023,7 @@ useEffect(() => {
 
 
 
-<Row className="mb-4">
+{/* <Row className="mb-4">
   <Col md={12}>
     <Card className="shadow-sm">
       <Card.Body>
@@ -1039,6 +1044,47 @@ useEffect(() => {
               </div>
             </li>
           ))}
+        </ul>
+      </Card.Body>
+    </Card>
+  </Col>
+</Row> */}
+
+<Row className="mb-4">
+  <Col md={12}>
+    <Card className="shadow-sm border-0">
+      <Card.Body>
+        <Card.Title className="mb-3">Recent Activities</Card.Title>
+        <ul className="list-unstyled mb-0" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+          {activities.length === 0 ? (
+            <li className="text-muted text-center py-3">No recent activity found.</li>
+          ) : (
+            activities.map((activity) => {
+              let iconClass = 'fas fa-info-circle text-info'; // default icon
+              if (activity.type === 'success') iconClass = 'fas fa-check-circle text-success';
+              else if (activity.type === 'warning') iconClass = 'fas fa-exclamation-circle text-warning';
+              else if (activity.type === 'error') iconClass = 'fas fa-times-circle text-danger';
+
+              return (
+                <li key={activity.id} className="mb-3">
+                  <div className="d-flex align-items-start">
+                    <i className={`${iconClass} me-2 mt-1`} style={{ fontSize: '1.1rem' }}></i>
+                    <div className="flex-grow-1">
+                      <div className="d-flex justify-content-between">
+                        <span>{activity.message}</span>
+                        <small className="text-muted">
+                          {dayjs(activity.createdAt).isValid()
+                            ? dayjs(activity.createdAt).fromNow()
+                            : 'Invalid date'}
+                            
+                        </small>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+              );
+            })
+          )}
         </ul>
       </Card.Body>
     </Card>

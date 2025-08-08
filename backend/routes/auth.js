@@ -72,15 +72,50 @@ function organizeMenu(menuItems, parentId = null) {
     }));
 }
 
-const createNotification = async (userId,type, message, relatedEntity, entityId) => {
+// const createNotification = async (
+//   userId,
+//   type,
+//   message,
+//   relatedEntity,
+//   entityId
+// ) => {
+//   try {
+//     // const userId = req.user?.id;
+
+//     await pool.execute(
+//       "INSERT INTO notifications (user_id,type, message, related_entity, entity_id) VALUES (?,?, ?, ?, ?)",
+//       [userId, type, message, relatedEntity, entityId]
+//     );
+
+//     const notification = {
+//       userId,
+//       type,
+//       message,
+//       relatedEntity,
+//       entityId,
+//       created_at: new Date(),
+//     };
+//     io.emit("new-notification", notification);
+//   } catch (err) {
+//     console.error("Error creating notification:", err);
+//   }
+// };
+const createNotification = async (
+  userId,
+  type,
+  message,
+  relatedEntity,
+  entityId
+) => {
   try {
-
-// const userId = req.user?.id;
-
+    console.log(
+      `[createNotification] Creating notification for userId: ${userId}`
+    );
 
     await pool.execute(
-      "INSERT INTO notifications (user_id,type, message, related_entity, entity_id) VALUES (?,?, ?, ?, ?)",
-      [userId,type, message, relatedEntity, entityId]
+      `INSERT INTO notifications (user_id, type, message, related_entity, entity_id, is_read, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, NOW())`,
+      [userId, type, message, relatedEntity, entityId]
     );
 
     const notification = {
@@ -91,11 +126,14 @@ const createNotification = async (userId,type, message, relatedEntity, entityId)
       entityId,
       created_at: new Date(),
     };
-    io.emit("new-notification", notification);
+
+    console.log(`[createNotification] Emitting to room user_${userId}`);
+    io.to(`user_${userId}`).emit("new-notification", notification);
   } catch (err) {
     console.error("Error creating notification:", err);
   }
 };
+
 
 const logAudit = async (
   // adminId,
@@ -232,7 +270,6 @@ router.post(
   // authenticateToken,
   upload.single("image"),
   async (req, res) => {
-
     if (req.fileValidationError) {
       return res.status(400).json({ message: req.fileValidationError });
     }
@@ -264,7 +301,6 @@ router.post(
       }
       const roleId = roleResult[0].id;
 
-      
       const [existingUser] = await pool.execute(
         "SELECT * FROM login WHERE email = ?",
         [email]
@@ -273,7 +309,6 @@ router.post(
         return res.status(409).json({ message: "User already exists" });
       }
 
-      
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(password, salt);
 
@@ -286,12 +321,22 @@ router.post(
       io.emit("new-signup", { name, email });
 
       await createNotification(
- "New User Registered",
-  
-  "A new user has been registered.",
-  "user",
-   result.insertId,
-);
+        "New User Registered",
+
+        "A new user has been registered.",
+        "user",
+        result.insertId
+      );
+
+      await pool.execute(
+        `INSERT INTO activities (type, message, user_id) VALUES (?, ?, ?)`,
+        [
+          "register",
+          `A new user (${name}) was registered with role ${role} by ${userId}`,
+
+          userId,
+        ]
+      );
 
       // Audit log
       // const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -625,39 +670,6 @@ router.get("/profile", authenticateToken, async (req, res) => {
   }
 });
 
-// router.put("/profile", authenticateToken, async (req, res) => {
-//   try {
-//     const userId = req.user.id;
-//     const { name, email, password,mobile } = req.body;
-
-//     if (!name || !email) {
-//       return res.status(400).json({ message: "Name and email are required" });
-//     }
-
-//     const [existingUser] = await pool.execute(
-//       "SELECT * FROM login WHERE id = ?",
-//       [userId]
-//     );
-//     if (existingUser.length === 0) {
-//       return res.status(404).json({ message: "User not found" });
-//     }
-
-//     const hashedPassword = password
-//       ? await bcrypt.hash(password, 10)
-//       : existingUser[0].password;
-
-//     await pool.execute(
-//       "UPDATE login SET name = ?, email = ?, password = ?, mobile = ?  WHERE id = ?",
-//       [name, email, hashedPassword,mobile, userId]
-//     );
-
-//     res.status(200).json({ message: "Profile updated successfully" });
-//   } catch (err) {
-//     console.error("Profile update error:", err);
-//     res.status(500).json({ message: "Failed to update profile" });
-//   }
-// });
-
 router.put("/profile", authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -789,9 +801,9 @@ router.get("/users/:id", authenticateToken, isAdmin, async (req, res) => {
   try {
     const [rows] = await pool.execute(
       `SELECT id, name, email,mobile, role_id, role, image, status, insert_time AS insertTime, 
-              last_login AS lastLogin 
-       FROM login 
-       WHERE id = ?`,
+                        last_login AS lastLogin 
+                FROM login 
+                WHERE id = ?`,
       [userId]
     );
 
@@ -936,8 +948,8 @@ router.get("/search", authenticateToken, async (req, res) => {
   try {
     const [results] = await pool.execute(
       `SELECT id, name, email,mobile, role, role_id, image, status
-       FROM login
-       WHERE name LIKE ? OR role LIKE ?`,
+                FROM login
+                WHERE name LIKE ? OR role LIKE ?`,
 
       [`%${searchTerm}%`, `%${searchTerm}%`]
     );
@@ -1230,10 +1242,10 @@ router.get(
     const showAll = req.query.showAll === "true";
 
     let query = `
-    SELECT id, path, icon, title, roles, parent_id, status, time, order_by
-    FROM menu_items
-    WHERE FIND_IN_SET(?, roles) > 0
-  `;
+              SELECT id, path, icon, title, roles, parent_id, status, time, order_by
+              FROM menu_items
+              WHERE FIND_IN_SET(?, roles) > 0
+            `;
 
     if (!showAll) {
       query += ` AND status = 'active'`;
@@ -1261,8 +1273,8 @@ router.post(
     const { title, path, icon, roles, parent_id, status, order_by } = req.body;
 
     const query = `INSERT INTO menu_items(title,path,icon,roles,parent_id,status,order_by,time)
-  VALUES(?,?,?,?,?,?,?,NOW())
-  `;
+            VALUES(?,?,?,?,?,?,?,NOW())
+            `;
 
     try {
       const [result] = await pool.execute(query, [
@@ -1327,10 +1339,10 @@ router.put(
     const { id } = req.params;
 
     const query = `
-  UPDATE menu_items
-  SET title = ? , path = ?,icon=?,roles =?,parent_id = ?,status =?,order_by = ?
-  WHERE id = ?
-  `;
+            UPDATE menu_items
+            SET title = ? , path = ?,icon=?,roles =?,parent_id = ?,status =?,order_by = ?
+            WHERE id = ?
+            `;
 
     try {
       await pool.execute(query, [
@@ -1700,42 +1712,6 @@ router.delete(
 
 //complaints
 
-// router.get(
-//   "/complaints",
-//   authenticateToken,
-//   checkPermission("complaint_management", "enable", "view"),
-//   async (req, res) => {
-//     try {
-//       const userId = req.user.id;
-//       const role = req.user.role;
-
-//       let query = `
-//         SELECT
-//           c.*,
-//           cat.category_name,
-//           sub.subcategory_name
-//         FROM complaints c
-//         LEFT JOIN category cat ON c.categories = cat.id
-//         LEFT JOIN subcategory sub ON c.subcategory = sub.id`;
-//       const params = [];
-
-//       if (role !== "Super Admin" && role !== "Admin") {
-//         query += ` WHERE c.user_id = ?`;
-//         params.push(userId);
-//       }
-
-//       query += ` ORDER BY c.created_at DESC`;
-
-//       const [rows] = await pool.execute(query, params);
-
-//       res.status(200).json(rows);
-//     } catch (err) {
-//       console.error("Error fetching complaints:", err);
-//       res.status(500).json({ message: "Error retrieving complaints" });
-//     }
-//   }
-// );
-
 router.get(
   "/complaints",
   authenticateToken,
@@ -1744,16 +1720,16 @@ router.get(
     try {
       const userId = req.user.id;
       const role = req.user.role;
-      const { priority } = req.query; // <-- new param
+      const { priority } = req.query;
 
       let query = `
-        SELECT 
-          c.*, 
-          cat.category_name, 
-          sub.subcategory_name 
-        FROM complaints c
-        LEFT JOIN category cat ON c.categories = cat.id
-        LEFT JOIN subcategory sub ON c.subcategory = sub.id`;
+                  SELECT 
+                    c.*, 
+                    cat.category_name, 
+                    sub.subcategory_name 
+                  FROM complaints c
+                  LEFT JOIN category cat ON c.categories = cat.id
+                  LEFT JOIN subcategory sub ON c.subcategory = sub.id`;
       const params = [];
 
       let conditions = [];
@@ -1791,10 +1767,10 @@ router.get(
   async (req, res) => {
     try {
       const [rows] = await pool.execute(`
-        SELECT COLUMN_TYPE 
-        FROM INFORMATION_SCHEMA.COLUMNS 
-        WHERE TABLE_NAME = 'complaints' AND COLUMN_NAME = 'status'
-      `);
+                  SELECT COLUMN_TYPE 
+                  FROM INFORMATION_SCHEMA.COLUMNS 
+                  WHERE TABLE_NAME = 'complaints' AND COLUMN_NAME = 'status'
+                `);
 
       if (rows.length === 0) {
         return res.status(500).json({ message: "Status column not found" });
@@ -1831,17 +1807,17 @@ router.get(
 
     try {
       let query = `
-        SELECT 
-          c.*, 
-          cat.category_name, 
-          sub.subcategory_name, 
-          u.name AS assigned_to_name
-        FROM complaints c
-        LEFT JOIN category cat ON c.categories = cat.id
-        LEFT JOIN subcategory sub ON c.subcategory = sub.id
-        LEFT JOIN login u ON c.assigned_to = u.id
-        WHERE c.id = ?
-      `;
+                  SELECT 
+                    c.*, 
+                    cat.category_name, 
+                    sub.subcategory_name, 
+                    u.name AS assigned_to_name
+                  FROM complaints c
+                  LEFT JOIN category cat ON c.categories = cat.id
+                  LEFT JOIN subcategory sub ON c.subcategory = sub.id
+                  LEFT JOIN login u ON c.assigned_to = u.id
+                  WHERE c.id = ?
+                `;
       const params = [complaintId];
 
       if (role !== "Super Admin" && role !== "Admin") {
@@ -1948,8 +1924,6 @@ router.post(
         }
       }
 
-
-
       // Prepare the database parameters
       const params = [
         userId,
@@ -1967,36 +1941,30 @@ router.post(
 
       const [insertResult] = await pool.execute(
         `INSERT INTO complaints 
-          (user_id, mobile, address, categories, subcategory, description, image, status, priority, latitude, longitude)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    (user_id, mobile, address, categories, subcategory, description, image, status, priority, latitude, longitude)
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         params
       );
 
-    const complaintId = insertResult.insertId;
+      const complaintId = insertResult.insertId;
 
+      await createNotification(
+        "New Complaint Registered",
 
-
-await createNotification(
- "New Complaint Registered",
-  
-  `A new complaint has been registered with Ticket #${complaintId} in category: ${categoryName}.`,
-  "complaint",
-  complaintId,
-  userId
-);
-
+        `A new complaint has been registered with Ticket #${complaintId} in category: ${categoryName}.`,
+        "complaint",
+        complaintId,
+        userId
+      );
 
       await pool.execute(
-  `INSERT INTO activities (type, message, user_id) VALUES (?, ?, ?)`,
-  [
-    "complaint",
-    `New complaint has been registered with Ticket #${complaintId} in category: ${categoryName}`,
-    userId
-  ]
-);
-
-
-
+        `INSERT INTO activities (type, message, user_id) VALUES (?, ?, ?)`,
+        [
+          "complaint",
+          `${user.name} has registered a new complaint with Ticket #${complaintId} in category: ${categoryName}`,
+          userId,
+        ]
+      );
 
       let templateName;
       let subject;
@@ -2051,205 +2019,10 @@ await createNotification(
   }
 );
 
-// router.post(
-//   "/complaints",
-//   upload.single("image"),
-//   authenticateToken,
-//   checkPermission("complaint_management", "enable", "create"),
-//   async (req, res) => {
-//     try {
-//       const {
-//         categories,
-//         subcategory,
-//         description,
-//         mobile,
-//         address,
-//         latitude: latRaw,
-//         longitude: longRaw,
-//          priority: priorityRaw,
-//       } = req.body;
-
-//       const priority = ['Low', 'Medium', 'High'].includes(priorityRaw) ? priorityRaw : 'Medium';
-
-//       const image = req.file ? req.file.filename : null;
-//       const userId = req.user.id;
-
-//       // Fetch full user details including name
-// const [userRows] = await pool.execute(
-//   "SELECT name, email FROM login WHERE id = ?",
-//   [userId]
-// );
-
-// if (userRows.length === 0) {
-//   return res.status(404).json({ message: "User not found." });
-// }
-
-// const user = {
-//   name: userRows[0].name,
-//   email: userRows[0].email,
-// };
-
-//       const latitude =
-//         latRaw !== undefined && latRaw !== "" ? parseFloat(latRaw) : null;
-//       const longitude =
-//         longRaw !== undefined && longRaw !== "" ? parseFloat(longRaw) : null;
-
-//       const sanitize = (val) => (val === undefined || val === "" ? null : val);
-
-//       const categoryId =
-//         categories && categories !== "" ? parseInt(categories) : null;
-//       const subcategoryId =
-//         subcategory && subcategory !== "" ? parseInt(subcategory) : null;
-
-//       const [categoryRows] = await pool.execute(
-//         "SELECT id, category_name FROM category WHERE id = ?",
-//         [categoryId]
-//       );
-//       if (categoryRows.length === 0) {
-//         return res.status(400).json({ message: "Invalid category selected." });
-//       }
-//       const categoryName = categoryRows[0].category_name;
-
-//       const [subRows] = await pool.execute(
-//         "SELECT id FROM subcategory WHERE category_id = ?",
-//         [categoryId]
-//       );
-
-//       if (subRows.length > 0 && !subcategoryId) {
-//         return res
-//           .status(400)
-//           .json({
-//             message: "Subcategory is required for the selected category.",
-//           });
-//       }
-
-//       if (subcategoryId) {
-//         const [validSub] = await pool.execute(
-//           "SELECT id FROM subcategory WHERE id = ? AND category_id = ?",
-//           [subcategoryId, categoryId]
-//         );
-
-//         if (validSub.length === 0) {
-//           return res
-//             .status(400)
-//             .json({ message: "Invalid subcategory for selected category." });
-//         }
-//       }
-
-//       // Prepare the database parameters
-//       const params = [
-//         userId,
-//         sanitize(mobile),
-//         sanitize(address),
-//         categoryId,
-//         subcategoryId,
-//         sanitize(description),
-//         image || null,
-//         "pending",
-//         latitude,
-//         longitude,
-//           priority,
-//       ];
-
-//       const [insertResult] = await pool.execute(
-//         `INSERT INTO complaints
-//           (user_id, mobile, address, categories, subcategory, description, image, status,priority,latitude, longitude)
-//          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)`,
-//         params
-//       );
-
-//       const complaintId = insertResult.insertId;
-
-// // console.log("req.user:", req.user);
-
-//       // const user = { name: req.user.name, email: req.user.email };
-
-//         let templateName;
-//       let subject;
-
-//       switch (categoryName.toLowerCase()) {
-//         case "water":
-//           templateName = "complaintWater";
-//           subject = `Water Complaint Registered - Ticket #${complaintId}`;
-//           break;
-//         case "ccms":
-//           templateName = "complaintCCMS";
-//           subject = `Complaint Registered - Ticket #${complaintId}`;
-//           break;
-//         default:
-//           templateName = "complaintOther";
-//           subject = `Your Complaint Has Been Registered - Ticket #${complaintId}`;
-//       }
-
-// const emailHtml = renderTemplate(templateName, {
-//   userName: user.name,
-//   ticketId: complaintId,
-//   categoryName: categoryName,
-//   description: description,
-// });
-
-//       await transporter.sendMail({
-//         from: `Support Team <${process.env.EMAIL_ID}>`,
-//         to: user.email,
-//         subject: `Your Complaint Has Been Registered - Ticket #${complaintId}`,
-//         html: emailHtml,
-//       });
-
-//       res.status(200).json({
-//         id: complaintId,
-//         user_id: userId,
-//         mobile,
-//         address,
-//         categories: categoryId,
-//         subcategory: subcategoryId,
-//         description,
-//         image,
-//         status: "pending",
-//         priority,
-//         latitude,
-//         longitude,
-//         createdAt: new Date(),
-//       });
-//     } catch (err) {
-//       console.error("Error inserting complaint:", err);
-//       res.status(500).json({ message: "Error saving complaint" });
-//     }
-//   }
-// );
-
-// router.put("/complaints/:id/priority", authenticateToken, checkPermission("complaint_management", "enable", "update"), async (req, res) => {
-//   const complaintId = req.params.id;
-//   const { priority } = req.body;  // New priority value
-
-//   const validPriorities = ['Low', 'Medium', 'High'];
-
-//   if (!validPriorities.includes(priority)) {
-//     return res.status(400).json({ message: "Invalid priority value" });
-//   }
-
-//   try {
-//     const [result] = await pool.execute(
-//       `UPDATE complaints SET priority = ? WHERE id = ?`,
-//       [priority, complaintId]
-//     );
-
-//     if (result.affectedRows === 0) {
-//       return res.status(404).json({ message: "Complaint not found" });
-//     }
-
-//      await createNotification('Priority Updated', `The priority for complaint ID: ${complaintId} has been updated to ${priority}.`, 'complaint', complaintId);
-
-//     res.status(200).json({ message: "Priority updated", priority });
-//   } catch (err) {
-//     console.error("Error updating priority:", err);
-//     res.status(500).json({ message: "Error updating priority" });
-//   }
-// });
-
 router.put(
   "/complaints/:id/priority",
   authenticateToken,
-  checkPermission("complaint_management", "enable", "update"),
+  checkPermission("complaint_management", "enable", "edit"),
   async (req, res) => {
     const complaintId = req.params.id;
     const { priority } = req.body;
@@ -2277,12 +2050,12 @@ router.put(
         complaintId
       );
 
-       await pool.execute(
+      await pool.execute(
         `INSERT INTO activities (type, message, user_id) VALUES (?, ?, ?)`,
         [
           "priority",
           `Complaint #${complaintId} priority change to ${priority}`,
-          complaintId
+          complaintId,
         ]
       );
 
@@ -2294,86 +2067,210 @@ router.put(
   }
 );
 
+// router.put(
+//   "/complaints/:id/status",
+//   authenticateToken,
+//   checkPermission("complaint_management", "enable", "update"),
+//   async (req, res) => {
+//     const complaintId = req.params.id;
+//     const { status } = req.body;
+
+//     try {
+//       // Fetch ENUM values from MySQL schema
+//       const [rows] = await pool.execute(`
+//         SELECT COLUMN_TYPE
+//         FROM INFORMATION_SCHEMA.COLUMNS
+//         WHERE TABLE_NAME = 'complaints' AND COLUMN_NAME = 'status'
+//       `);
+
+//       if (rows.length === 0) {
+//         return res.status(500).json({ message: "Status column not found" });
+//       }
+
+//       const enumStr = rows[0].COLUMN_TYPE;
+//       const matches = enumStr.match(/enum\((.*)\)/i);
+
+//       if (!matches) {
+//         return res.status(500).json({ message: "Could not parse ENUM values" });
+//       }
+
+//       const validStatuses = matches[1]
+//         .split(",")
+//         .map((val) => val.trim().replace(/^'(.*)'$/, "$1")); // remove quotes
+
+//       if (!validStatuses.includes(status)) {
+//         return res.status(400).json({ message: "Invalid status value" });
+//       }
+
+//       const [result] = await pool.execute(
+//         `UPDATE complaints SET status = ? WHERE id = ?`,
+//         [status, complaintId]
+//       );
+
+//       if (result.affectedRows === 0) {
+//         return res.status(404).json({ message: "Complaint not found" });
+//       }
+
+//       await pool.execute(
+//         `INSERT INTO activities (type, message, user_id) VALUES (?, ?, ?)`,
+//         [
+//           "assignment",
+//           `Complaint #${complaintId} status changed to ${status}`,
+//           req.user.id,
+//         ]
+//       );
+
+//       res.status(200).json({ message: "Status updated", status });
+//     } catch (err) {
+//       console.error("Error updating status:", err);
+//       res.status(500).json({ message: "Error updating complaint status" });
+//     }
+//   }
+// );
+
 router.put(
   "/complaints/:id/status",
   authenticateToken,
-  checkPermission("complaint_management", "enable", "update"),
-  async (req, res) => {
+  checkPermission("complaint_management", "enable", "edit"),
+  async (req, res, next) => {
     const complaintId = req.params.id;
     const { status } = req.body;
+    // const updaterId = req.user.id;
+    const updaterId = Number(req.user.id); // force numeric comparison
+
 
     try {
-      // Fetch ENUM values from MySQL schema
-      const [rows] = await pool.execute(`
-        SELECT COLUMN_TYPE 
-        FROM INFORMATION_SCHEMA.COLUMNS 
-        WHERE TABLE_NAME = 'complaints' AND COLUMN_NAME = 'status'
-      `);
+      const [[complaint]] = await pool.execute(
+        "SELECT user_id FROM complaints WHERE id = ?",
+        [complaintId]
+      );
+      if (!complaint) {
+        return res.status(404).json({ message: "Complaint not found" });
+      }
+      const ownerId = complaint.user_id;
 
-      if (rows.length === 0) {
-        return res.status(500).json({ message: "Status column not found" });
+      const [[col]] = await pool.execute(
+        `SELECT COLUMN_TYPE 
+                  FROM INFORMATION_SCHEMA.COLUMNS 
+                  WHERE TABLE_SCHEMA = DATABASE()
+                    AND TABLE_NAME = 'complaints'
+                    AND COLUMN_NAME = 'status'`
+      );
+
+      if (!col || typeof col.COLUMN_TYPE !== "string") {
+        return re;
+        s.status(500).json({
+          message: "Complaint.status column missing or not enum",
+        });
       }
 
-      const enumStr = rows[0].COLUMN_TYPE;
-      const matches = enumStr.match(/enum\((.*)\)/i);
-
-      if (!matches) {
-        return res.status(500).json({ message: "Could not parse ENUM values" });
+      const m = col.COLUMN_TYPE.match(/^enum\((.*)\)$/i);
+      if (!m) {
+        return res.status(500).json({ message: "Could not parse enum values" });
       }
 
-      const validStatuses = matches[1]
+      const validStatuses = m[1]
         .split(",")
-        .map((val) => val.trim().replace(/^'(.*)'$/, "$1")); // remove quotes
+        .map((s) => s.trim().replace(/^'|'$/g, ""));
 
       if (!validStatuses.includes(status)) {
-        return res.status(400).json({ message: "Invalid status value" });
+        return res
+          .status(400)
+          .json({
+            message: `Invalid status—allowed values: ${validStatuses.join(
+              ", "
+            )}`,
+          });
       }
 
-      const [result] = await pool.execute(
+      const [{ affectedRows }] = await pool.execute(
         `UPDATE complaints SET status = ? WHERE id = ?`,
         [status, complaintId]
       );
-
-      if (result.affectedRows === 0) {
-        return res.status(404).json({ message: "Complaint not found" });
+      if (affectedRows === 0) {
+        return res.status(500).json({ message: "Failed to update status" });
       }
 
       await pool.execute(
         `INSERT INTO activities (type, message, user_id) VALUES (?, ?, ?)`,
         [
-          "assignment",
-          `Complaint #${complaintId} status changed to ${status}` ,
-          req.user.id,
+          "status-change",
+          `Complaint #${complaintId} status changed to "${status}"`,
+          updaterId,
         ]
       );
 
-      res.status(200).json({ message: "Status updated", status });
+     if (Number(ownerId) === updaterId) {
+  // Don't notify if user is updating their own complaint
+  console.log("Skipping notification — updater is owner.");
+} else {
+  // Notify only the owner of the complaint
+  await createNotification(
+    ownerId,
+    "Complaint Status Update",
+    `Your complaint #${complaintId} status has been changed to "${status}".`,
+    "complaint",
+    complaintId
+  );
+}
+
+      if (["resolved", "closed"].includes(status.toLowerCase())) {
+        const [[user]] = await pool.execute(
+          "SELECT name, email FROM login WHERE id = ?",
+          [ownerId]
+        );
+
+        if (user?.email) {
+          const subject = `Your Complaint #${complaintId} Has Been ${
+            status.charAt(0).toUpperCase() + status.slice(1)
+          }`;
+          const html = renderTemplate("complaintStatus", {
+            userName: user.name,
+            ticketId: complaintId,
+            status: status.toUpperCase(),
+            // logoUrl: "https://yourdomain.com/assets/logo.png"
+          });
+
+          try {
+            await sendComplaintEmail(user.email, subject, html);
+            console.log(`Status update email sent to ${user.email}`);
+          } catch (err) {
+            console.error("Failed to send status update email:", err);
+          }
+        }
+      }
+
+      return res
+        .status(200)
+        .json({ message: "Status updated successfully", status });
     } catch (err) {
-      console.error("Error updating status:", err);
-      res.status(500).json({ message: "Error updating complaint status" });
+      console.error("Error updating complaint status:", err);
+      return next(err);
     }
   }
 );
-
 // router.put(
 //   "/complaints/:id/assign",
 //   authenticateToken,
-//   checkPermission("complaint_management", "enable", "update"),
+//   checkPermission("complaint_management", "enable", "edit"),
 //   async (req, res) => {
 //     const complaintId = req.params.id;
 //     const { assignedToId } = req.body;
 //     const assignedBy = req.user.id;
 
 //     try {
-//       // Check if the user being assigned to exists and is admin/staff
+//       // Validate assigned user (must be Admin)
 //       const [userRows] = await pool.execute(
-//         `SELECT id FROM login WHERE id = ? AND role IN ('Admin')`,
+//         `SELECT id, name FROM login WHERE id = ? AND role = 'Admin'`,
 //         [assignedToId]
 //       );
 //       if (userRows.length === 0) {
 //         return res.status(400).json({ message: "Invalid assignee" });
 //       }
 
+//       const assigneeName = userRows[0].name;
+
+//       // Assign complaint
 //       const [result] = await pool.execute(
 //         `UPDATE complaints SET assigned_to = ?, assigned_by = ?, assigned_at = NOW() WHERE id = ?`,
 //         [assignedToId, assignedBy, complaintId]
@@ -2381,6 +2278,27 @@ router.put(
 
 //       if (result.affectedRows === 0) {
 //         return res.status(404).json({ message: "Complaint not found" });
+//       }
+
+//       // Log activity
+//       await pool.execute(
+//         `INSERT INTO activities (type, message, user_id) VALUES (?, ?, ?)`,
+//         [
+//           "assignment",
+//           `Complaint #${complaintId} assigned to ${assigneeName}`,
+//           assignedBy,
+//         ]
+//       );
+
+//       // Notify assignee (not the complaint owner)
+//       if (Number(assignedToId) !== Number(assignedBy)) {
+//         await createNotification(
+//           assignedToId,
+//           "Complaint Assigned",
+//           `You have been assigned complaint #${complaintId}.`,
+//           "complaint",
+//           complaintId
+//         );
 //       }
 
 //       res.status(200).json({ message: "Complaint assigned successfully" });
@@ -2391,59 +2309,272 @@ router.put(
 //   }
 // );
 
+
 router.put(
   "/complaints/:id/assign",
   authenticateToken,
-  checkPermission("complaint_management", "enable", "update"),
+  checkPermission("complaint_management", "enable", "edit"),
   async (req, res) => {
     const complaintId = req.params.id;
     const { assignedToId } = req.body;
-    const assignedBy = req.user.id;
+    const assignedBy = Number(req.user.id);
 
     try {
-      // Check if the user being assigned to exists and is admin/staff
-      const [userRows] = await pool.execute(
-        `SELECT id, name FROM login WHERE id = ? AND role IN ('Admin')`,
+      // 1. Validate assignee is a valid admin user
+      const [rows] = await pool.execute(
+        `SELECT id, name, id AS complaintOwnerId
+         FROM login WHERE id = ? AND role = 'Admin'`,
         [assignedToId]
       );
-      if (userRows.length === 0) {
+      if (rows.length === 0) {
         return res.status(400).json({ message: "Invalid assignee" });
       }
+      const assignee = rows[0];
+      const assigneeName = assignee.name;
 
-      const assigneeName = userRows[0].name;
+      // 2. Fetch the complaint to get its current owner
+      const [[complaint]] = await pool.execute(
+        `SELECT user_id AS ownerId FROM complaints WHERE id = ?`,
+        [complaintId]
+      );
+      if (!complaint) {
+        return res.status(404).json({ message: "Complaint not found" });
+      }
+      const ownerId = Number(complaint.ownerId);
 
-      const [result] = await pool.execute(
-        `UPDATE complaints SET assigned_to = ?, assigned_by = ?, assigned_at = NOW() WHERE id = ?`,
+      // Prevent assigning your own complaint
+      if (assignedBy === ownerId) {
+        return res
+          .status(403)
+          .json({ message: "You cannot assign your own complaint." });
+      }
+
+      // 3. Assign complaint and log activity
+      await pool.execute(
+        `UPDATE complaints
+         SET assigned_to = ?, assigned_by = ?, assigned_at = NOW()
+         WHERE id = ?`,
         [assignedToId, assignedBy, complaintId]
       );
 
-      if (result.affectedRows === 0) {
-        return res.status(404).json({ message: "Complaint not found" });
-      }
-
-    
       await pool.execute(
-        `INSERT INTO activities (type, message, user_id) VALUES (?, ?, ?)`,
-        [
-          "assignment",
-          `Complaint #${complaintId} assigned to ${assigneeName}`,
-          assignedBy
-        ]
+        `INSERT INTO activities (type, message, user_id)
+         VALUES (?, ?, ?)`,
+        ["assignment", `Complaint #${complaintId} assigned to ${assigneeName}`, assignedBy]
       );
 
-      res.status(200).json({ message: "Complaint assigned successfully" });
+      // 4. Notify assignee only (not the updater)
+      if (assignedToId !== assignedBy) {
+        await createNotification(
+          assignedToId,
+          "Complaint Assigned",
+          `You have been assigned complaint #${complaintId}.`,
+          "complaint",
+          complaintId
+        );
+      }
+
+      // 5. Optionally, notify complaint owner if different than assignee
+      if (ownerId !== assignedToId && ownerId !== assignedBy) {
+        await createNotification(
+          ownerId,
+          "Complaint Assignment Notice",
+          `Your complaint #${complaintId} has been assigned to ${assigneeName}.`,
+          "complaint",
+          complaintId
+        );
+      }
+
+      return res.status(200).json({ message: "Complaint assigned successfully" });
     } catch (err) {
       console.error("Error assigning complaint:", err);
-      res.status(500).json({ message: "Failed to assign complaint" });
+      return res.status(500).json({ message: "Failed to assign complaint" });
     }
   }
 );
 
 
+
+//comments
+
+// router.get('/complaints/:id/comments', authenticateToken, async (req, res) => {
+//   const complaintId = req.params.id;
+
+//   try {
+//     const [rows] = await pool.execute(
+//       `SELECT comments.comment, comments.timestamp, login.name AS user_name
+//        FROM comments
+//        JOIN login ON comments.user_id = login.id
+//        WHERE comments.complaint_id = ?
+//        ORDER BY comments.timestamp ASC`,
+//       [complaintId]
+//     );
+
+//     res.json(rows);
+//   } catch (err) {
+//     console.error('Fetch comments error:', err);
+//     res.status(500).json({ message: 'Failed to fetch comments' });
+//   }
+// });
+
+router.get(
+  "/complaints/:id/comments",
+  authenticateToken,
+  checkPermission("comments", "enable", "view"),
+  async (req, res) => {
+    const complaintId = req.params.id;
+
+    try {
+      const [rows] = await pool.execute(
+        `SELECT comments.id, comments.comment, comments.timestamp, comments.user_id, comments.parent_comment_id,
+                        login.name AS user_name
+                FROM comments
+                JOIN login ON comments.user_id = login.id
+                WHERE comments.complaint_id = ?
+                ORDER BY comments.timestamp ASC`,
+        [complaintId]
+      );
+
+      res.json(rows);
+    } catch (err) {
+      console.error("Fetch comments error:", err);
+      res.status(500).json({ message: "Failed to fetch comments" });
+    }
+  }
+);
+
+router.post(
+  "/complaints/:id/comments",
+  authenticateToken,
+  checkPermission("comments", "enable", "create"),
+  async (req, res) => {
+    const complaintId = req.params.id;
+    const userId = req.user.id;
+    const { comment, parent_comment_id = null } = req.body;
+
+    if (!comment?.trim()) {
+      return res.status(400).json({ message: "Comment is required." });
+    }
+
+    try {
+      // Check if complaint exists
+      const [complaint] = await pool.execute(
+        "SELECT user_id, assigned_to FROM complaints WHERE id = ?",
+        [complaintId]
+      );
+
+      if (complaint.length === 0) {
+        return res.status(404).json({ message: "Complaint not found." });
+      }
+
+      if (parent_comment_id) {
+        // Validate parent comment exists and belongs to same complaint
+        const [parentComment] = await pool.execute(
+          "SELECT id FROM comments WHERE id = ? AND complaint_id = ?",
+          [parent_comment_id, complaintId]
+        );
+        if (parentComment.length === 0) {
+          return res.status(400).json({ message: "Invalid parent comment." });
+        }
+      }
+
+     
+      const [commentResult] = await pool.execute(
+        "INSERT INTO comments (complaint_id, user_id, comment, parent_comment_id) VALUES (?, ?, ?, ?)",
+        [complaintId, userId, comment.trim(), parent_comment_id]
+      );
+
+      const commentId = commentResult.insertId;
+
+     
+      const complaintData = complaint[0];
+      const recipientIds = new Set();
+
+      if (complaintData.user_id && complaintData.user_id !== userId) {
+        recipientIds.add(complaintData.user_id);
+      }
+
+      if (complaintData.assigned_to && complaintData.assigned_to !== userId) {
+        recipientIds.add(complaintData.assigned_to);
+      }
+
+    
+      for (const recipientId of recipientIds) {
+        await createNotification(
+          recipientId,
+          "New Comment on Complaint",
+          `A new comment was added on complaint #${complaintId}.`,
+          "comment",    
+          commentId    
+        );
+      }
+
+      res.status(201).json({ message: "Comment added." });
+    } catch (err) {
+      console.error("Add comment error:", err);
+      res.status(500).json({ message: "Server error" });
+    }
+  }
+);
+
+
+
+
+router.get(
+  "/complaints/comments/unread-counts",
+  authenticateToken,
+  async (req, res) => {
+    const userId = req.user.id; 
+
+    try {
+      const [rows] = await pool.execute(
+        `
+        SELECT c.complaint_id, COUNT(*) AS unread_count
+        FROM notifications n
+        JOIN comments c ON n.entity_id = c.id
+        WHERE n.user_id = ?
+          AND n.related_entity = 'comment'
+          AND n.is_read = 0
+        GROUP BY c.complaint_id;
+        `,
+        [userId]
+      );
+
+      const unreadMap = {};
+      for (const row of rows) {
+        unreadMap[row.complaint_id] = row.unread_count;
+      }
+
+      res.json(unreadMap); 
+    } catch (err) {
+      console.error("Unread count fetch error:", err);
+      res.status(500).json({ message: "Failed to fetch unread counts" });
+    }
+  }
+);
+
+
+
+router.post('/comments/mark-read', authenticateToken, async (req, res) => {
+  const { type, entityId } = req.body;
+  const userId = req.user.id;
+
+  await pool.execute(
+    `UPDATE notifications SET is_read = 0
+     WHERE user_id = ? AND type = ? AND entity_id = ?`,
+    [userId, type, entityId]
+  );
+
+  res.json({ message: "Notifications marked as read" });
+});
+
+
+
+
 router.put(
   "/complaints/:id/feedback",
   authenticateToken,
-  checkPermission("complaint_management", "enable", "update"),
+  checkPermission("complaint_management", "enable", "edit"),
   async (req, res) => {
     const complaintId = req.params.id;
     const userId = req.user.id;
@@ -2456,7 +2587,7 @@ router.put(
     }
 
     try {
-      // Ensure complaint exists and belongs to the current user
+      // Ensuring complaint exists and belongs to the current user
       const [fetch] = await pool.execute(
         "SELECT user_id, status FROM complaints WHERE id = ?",
         [complaintId]
@@ -2476,11 +2607,22 @@ router.put(
           .json({ message: "Can only give feedback on resolved complaints" });
       }
 
+      const feedbackName = fetch[0].name;
+
       const [result] = await pool.execute(
         `UPDATE complaints
-         SET feedback = ?, rating = ?, feedback_at = NOW()
-         WHERE id = ?`,
+                  SET feedback = ?, rating = ?, feedback_at = NOW()
+                  WHERE id = ?`,
         [feedback, rating, complaintId]
+      );
+
+      await pool.execute(
+        `INSERT INTO activities (type, message, user_id) VALUES (?, ?, ?)`,
+        [
+          "feedback",
+          `A new feedback was given on Ticket ID #${complaintId} by user ${userId}`,
+          userId,
+        ]
       );
 
       res.status(200).json({ message: "Feedback saved" });
@@ -2491,97 +2633,24 @@ router.put(
   }
 );
 
-// complaint dasboard api
-
-// router.get("/complaints/stats/count", authenticateToken, async (req, res) => {
-//   const { period } = req.query; // 'day', 'week', 'month'
-//   let groupBy = "DATE(created_at)";
-//   if (period === "week") groupBy = "YEARWEEK(created_at)";
-//   else if (period === "month") groupBy = "DATE_FORMAT(created_at, '%Y-%m')";
-
-//   try {
-//     const [rows] = await pool.execute(`
-//       SELECT ${groupBy} AS period, COUNT(*) AS count
-//       FROM complaints
-//       GROUP BY ${groupBy}
-//       ORDER BY ${groupBy}
-//     `);
-//     res.json(rows);
-//   } catch (err) {
-//     console.error("Stats error:", err);
-//     res.status(500).json({ message: "Error fetching stats" });
-//   }
-// });
-
-// router.get("/complaints/stats/status", authenticateToken, async (req, res) => {
-//   try {
-//     const [rows] = await pool.execute(`
-//       SELECT status, COUNT(*) AS count
-//       FROM complaints
-//       GROUP BY status
-//     `);
-//     res.json(rows);
-//   } catch (err) {
-//     res.status(500).json({ message: "Error retrieving status stats" });
-//   }
-// });
-
-// router.get(
-//   "/complaints/stats/resolution-time",
-//   authenticateToken,
-//   async (req, res) => {
-//     try {
-//       const [rows] = await pool.execute(`
-//       SELECT 
-//         DATE(created_at) AS date,
-//         AVG(TIMESTAMPDIFF(HOUR, created_at, feedback_at)) AS avg_hours
-//       FROM complaints
-//       WHERE feedback_at IS NOT NULL
-//       GROUP BY DATE(created_at)
-//     `);
-//       res.json(rows);
-//     } catch (err) {
-//       res.status(500).json({ message: "Error calculating resolution time" });
-//     }
-//   }
-// );
-
-// router.get(
-//   "/complaints/stats/categories",
-//   authenticateToken,
-//   async (req, res) => {
-//     try {
-//       const [rows] = await pool.execute(`
-//       SELECT c.category_name, COUNT(*) AS count
-//       FROM complaints cp
-//       JOIN category c ON cp.categories = c.id
-//       GROUP BY cp.categories
-//       ORDER BY count DESC
-//       LIMIT 5
-//     `);
-//       res.json(rows);
-//     } catch (err) {
-//       res.status(500).json({ message: "Error fetching category stats" });
-//     }
-//   }
-// );
-
-
 router.get("/complaints/stats/count", authenticateToken, async (req, res) => {
-  const userId = req.user.id;  // get user id from token
+  const userId = req.user.id;
   const { period } = req.query;
   let groupBy = "DATE(created_at)";
   if (period === "week") groupBy = "YEARWEEK(created_at)";
   else if (period === "month") groupBy = "DATE_FORMAT(created_at, '%Y-%m')";
 
   try {
-    const [rows] = await pool.execute(`
-      SELECT ${groupBy} AS period, COUNT(*) AS count
-      FROM complaints
-      WHERE user_id = ?
-      GROUP BY ${groupBy}
-      ORDER BY ${groupBy}
-    `, [userId]);
+    const [rows] = await pool.execute(
+      `
+                SELECT ${groupBy} AS period, COUNT(*) AS count
+                FROM complaints
+                WHERE user_id = ?
+                GROUP BY ${groupBy}
+                ORDER BY ${groupBy}
+              `,
+      [userId]
+    );
     res.json(rows);
   } catch (err) {
     console.error("Stats error:", err);
@@ -2593,186 +2662,202 @@ router.get("/complaints/stats/status", authenticateToken, async (req, res) => {
   const userId = req.user.id;
 
   try {
-    const [rows] = await pool.execute(`
-      SELECT status, COUNT(*) AS count
-      FROM complaints
-      WHERE user_id = ?
-      GROUP BY status
-    `, [userId]);
+    const [rows] = await pool.execute(
+      `
+                SELECT status, COUNT(*) AS count
+                FROM complaints
+                WHERE user_id = ?
+                GROUP BY status
+              `,
+      [userId]
+    );
     res.json(rows);
   } catch (err) {
     res.status(500).json({ message: "Error retrieving status stats" });
   }
 });
 
-router.get("/complaints/stats/resolution-time", authenticateToken, async (req, res) => {
-  const userId = req.user.id;
-
-  try {
-    const [rows] = await pool.execute(`
-      SELECT 
-        DATE(created_at) AS date,
-        AVG(TIMESTAMPDIFF(HOUR, created_at, feedback_at)) AS avg_hours
-      FROM complaints
-      WHERE feedback_at IS NOT NULL AND user_id = ?
-      GROUP BY DATE(created_at)
-    `, [userId]);
-    res.json(rows);
-  } catch (err) {
-    res.status(500).json({ message: "Error calculating resolution time" });
-  }
-});
-
-router.get("/complaints/stats/categories", authenticateToken, async (req, res) => {
-  const userId = req.user.id;
-
-  try {
-    const [rows] = await pool.execute(`
-      SELECT c.category_name, COUNT(*) AS count
-      FROM complaints cp
-      JOIN category c ON cp.categories = c.id
-      WHERE cp.user_id = ?
-      GROUP BY cp.categories
-      ORDER BY count DESC
-      LIMIT 5
-    `, [userId]);
-    res.json(rows);
-  } catch (err) {
-    res.status(500).json({ message: "Error fetching category stats" });
-  }
-});
-
-
-// router.get("/notifications", authenticateToken, async (req, res) => {
-//   try {
-//     const [notifications] = await pool.execute(
-//       "SELECT * FROM notifications ORDER BY created_at DESC"
-//     );
-
-//     // Send back the notifications
-//     res.status(200).json(notifications);
-//   } catch (err) {
-//     console.error("Error fetching notifications:", err);
-//     res.status(500).json({ message: "Failed to fetch notifications" });
-//   }
-// });
-
-
-
-// router.get("/notifications", authenticateToken, async (req, res) => {
-//   try {
-//     // Limiting to the latest 5 notifications
-//     const [notifications] = await pool.execute(
-//       "SELECT * FROM notifications ORDER BY created_at DESC LIMIT 5"
-//     );
-
-//     // Send back the notifications
-//     res.status(200).json(notifications);
-//   } catch (err) {
-//     console.error("Error fetching notifications:", err);
-//     res.status(500).json({ message: "Failed to fetch notifications" });
-//   }
-// });
-
-
-router.get('/notifications', authenticateToken, 
-   checkPermission("complaint_management", "enable", "view"),
+router.get(
+  "/complaints/stats/resolution-time",
+  authenticateToken,
   async (req, res) => {
-  try {
-    
-    const { role, userId } = req.user;
+    const userId = req.user.id;
 
-   
-    let query = 'SELECT * FROM notifications';
-    let queryParams = [];
-
-    if (role !== 'Super Admin') {
-    
-      query += ' WHERE user_id = ?';
-      queryParams = [userId];
+    try {
+      const [rows] = await pool.execute(
+        `
+                SELECT 
+                  DATE(created_at) AS date,
+                  AVG(TIMESTAMPDIFF(HOUR, created_at, feedback_at)) AS avg_hours
+                FROM complaints
+                WHERE feedback_at IS NOT NULL AND user_id = ?
+                GROUP BY DATE(created_at)
+              `,
+        [userId]
+      );
+      res.json(rows);
+    } catch (err) {
+      res.status(500).json({ message: "Error calculating resolution time" });
     }
-    const [notifications] = await pool.execute(query, queryParams);
-    res.json(notifications);
-
-  } catch (error) {
-    console.error('Error fetching notifications:', error);
-    res.status(500).json({ message: 'Failed to fetch notifications.' });
   }
-});
+);
 
+router.get(
+  "/complaints/stats/categories",
+  authenticateToken,
+  async (req, res) => {
+    const userId = req.user.id;
 
-
-router.put("/notifications/:id/read", authenticateToken, 
-    checkPermission("complaint_management", "enable", "update"),
-    async (req, res) => {
-  const notificationId = req.params.id;
-
-  try {
-    const [result] = await pool.execute(
-      "UPDATE notifications SET read = TRUE WHERE id = ?",
-      [notificationId]
-    );
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ message: "Notification not found" });
+    try {
+      const [rows] = await pool.execute(
+        `
+                SELECT c.category_name, COUNT(*) AS count
+                FROM complaints cp
+                JOIN category c ON cp.categories = c.id
+                WHERE cp.user_id = ?
+                GROUP BY cp.categories
+                ORDER BY count DESC
+                LIMIT 5
+              `,
+        [userId]
+      );
+      res.json(rows);
+    } catch (err) {
+      res.status(500).json({ message: "Error fetching category stats" });
     }
-
-    res.status(200).json({ message: "Notification marked as read" });
-  } catch (err) {
-    console.error("Error marking notification as read:", err);
-    res.status(500).json({ message: "Failed to mark notification as read" });
   }
-});
+);
+
+// router.get(
+//   "/notifications",
+//   authenticateToken,
+//   checkPermission("notification", "enable", "view"),
+//   async (req, res) => {
+//     try {
+//       const { role, id } = req.user;
+//       console.log("User Info:", req.user);
 
 
+//       let query = `
+//                   SELECT id, user_id, type, message, related_entity, entity_id, is_read, created_at 
+//                   FROM notifications
+//                 `;
+//       let queryParams = [];
 
-// // GET /auth/recent-activities
-// router.get('/recent-activities', 
-//   //  checkPermission("recent_activity", "enable", "view"),
-//   authenticateToken, async (req, res) => {
-//   try {
-//     const user = req.user;
-//     let activitiesQuery = '';
-//     let params = [];
+//       // Only Super Admin can see all users' notifications
+//       if (role !== "User") {
+//         query += " WHERE user_id = ?";
+//         queryParams.push(id);
+//       }
 
-//     if (user.role === 'Super Admin' || user.role === 'Admin') {
-//       activitiesQuery = `
-//         SELECT * FROM activities
-//         ORDER BY createdAt DESC
-//         LIMIT 20
-//       `;
-//     } else {
-//       activitiesQuery = `
-//         SELECT * FROM activities
-//         WHERE user_id = ?
-//         ORDER BY createdAt DESC
-//         LIMIT 20
-//       `;
-//       params = [user.id];
+//       query += " ORDER BY created_at DESC";
+
+//       const [notifications] = await pool.execute(query, queryParams);
+
+//       res.status(200).json(notifications);
+//     } catch (error) {
+//       console.error("Error fetching notifications:", error);
+//       res.status(500).json({ message: "Failed to fetch notifications." });
 //     }
-
-//     const [activities] = await pool.execute(activitiesQuery, params);
-//     res.status(200).json(activities);
-//   } catch (error) {
-//     console.error("Error fetching recent activities:", error);
-//     res.status(500).json({ message: 'Failed to fetch recent activities.' });
 //   }
-// });
+// );
+
+router.get(
+  "/notifications",
+  authenticateToken,
+  checkPermission("notification", "enable", "view"),
+  async (req, res) => {
+    try {
+      const { id } = req.user;
+
+      const [notifications] = await pool.execute(
+        `
+        SELECT id, user_id, type, message, related_entity, entity_id, is_read, created_at 
+        FROM notifications 
+        WHERE user_id = ?
+        ORDER BY created_at DESC
+        `,
+        [id]
+      );
+
+      res.status(200).json(notifications);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+      res.status(500).json({ message: "Failed to fetch notifications." });
+    }
+  }
+);
 
 
-router.get('/recent-activities', 
+router.put(
+  "/notifications/:id/read",
+  authenticateToken,
+  checkPermission("notification", "enable", "edit"),
+  async (req, res) => {
+    const notificationId = req.params.id;
+    const { id, role } = req.user;
+
+    try {
+      let updateQuery = "UPDATE notifications SET is_read = TRUE WHERE id = ?";
+      let queryParams = [notificationId];
+
+      // if (role !== "Super Admin") {
+      //   updateQuery += " AND user_id = ?";
+      //   queryParams.push(id);
+      // }
+
+      const [result] = await pool.execute(updateQuery, queryParams);
+
+      if (result.affectedRows === 0) {
+        return res
+          .status(404)
+          .json({ message: "Notification not found or not authorized" });
+      }
+
+      res.status(200).json({ message: "Notification marked as read" });
+    } catch (err) {
+      console.error("Error marking notification as read:", err);
+      res.status(500).json({ message: "Failed to mark notification as read" });
+    }
+  }
+);
+
+router.put(
+  "/notifications/mark-all-read",
+  authenticateToken,
+  async (req, res) => {
+    try {
+      const { id, role } = req.user;
+
+      const [result] = await pool.execute(
+        role === "Super Admin"
+          ? "UPDATE notifications SET is_read = TRUE"
+          : "UPDATE notifications SET is_read = TRUE WHERE user_id = ?",
+        role === "Super Admin" ? [] : [id]
+      );
+
+      res.status(200).json({ message: "All notifications marked as read" });
+    } catch (err) {
+      console.error("Failed to mark all as read:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  }
+);
+
+router.get(
+  "/recent-activities",
   // checkPermission("recent_activity", "enable", "view"),
-  authenticateToken, 
+  authenticateToken,
   async (req, res) => {
     try {
       const user = req.user;
       let query = `
-        SELECT id, type, message, user_id, createdAt 
-        FROM activities
-      `;
+                  SELECT id, type, message, user_id, createdAt 
+                  FROM activities
+                `;
       const params = [];
 
-      if (!(user.role === 'Super Admin' || user.role === 'Admin')) {
+      if (!(user.role === "Super Admin" || user.role === "Admin")) {
         query += ` WHERE user_id = ?`;
         params.push(user.id);
       }
@@ -2780,48 +2865,13 @@ router.get('/recent-activities',
       query += ` ORDER BY createdAt DESC LIMIT 20`;
 
       const [activities] = await pool.execute(query, params);
-      
+
       res.status(200).json(activities);
     } catch (error) {
       console.error("Error fetching recent activities:", error);
-      res.status(500).json({ message: 'Failed to fetch recent activities.' });
+      res.status(500).json({ message: "Failed to fetch recent activities." });
     }
-});
-
-
-
-
-
-// router.get(
-//   '/recent-activities',
-//   authenticateToken,
-//   checkPermission('recent_activity', 'enable', 'view'),
-//   async (req, res) => {
-//     try {
-//       const user = req.user;
-
-//       let activitiesQuery = '';
-//       let params = [];
-
-//       if (user.role === 'Super Admin' || user.role === 'Admin') {
-//         activitiesQuery = `SELECT * FROM activities ORDER BY createdAt DESC LIMIT 20`;
-//       } else {
-//         activitiesQuery = `SELECT * FROM activities WHERE user_id = ? ORDER BY createdAt DESC LIMIT 20`;
-//         params = [user.id];
-//       }
-
-//       const [activities] = await pool.execute(activitiesQuery, params);
-//       res.status(200).json(activities);
-//     } catch (error) {
-//       console.error('Error fetching recent activities:', error);
-//       res.status(500).json({ message: 'Failed to fetch recent activities.' });
-//     }
-//   }
-// );
-
-
-
-
-
+  }
+);
 
 export default router;

@@ -209,42 +209,56 @@ function ComplaintCharts() {
   const [period, setPeriod] = useState("day");
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    setLoading(true);
+ useEffect(() => {
+  setLoading(true);
 
-    Promise.all([
-      axios.get("http://localhost:5001/auth/complaints/stats/status", {
-        headers: { Authorization: `Bearer ${token}` },
-      }),
-      axios.get("http://localhost:5001/auth/complaints/stats/count", {
-        headers: { Authorization: `Bearer ${token}` },
-        params: { period },
-      }),
-      axios.get("http://localhost:5001/auth/complaints/stats/resolution-time", {
-        headers: { Authorization: `Bearer ${token}` },
-      }),
-      axios.get("http://localhost:5001/auth/complaints/stats/categories", {
-        headers: { Authorization: `Bearer ${token}` },
-      }),
-    ])
-      .then(([statusRes, trendRes, resolutionRes, categoriesRes]) => {
-        // Set data
-        setStatusData(statusRes.data);
-        setTrendData(trendRes.data);
-        setResolutionData(resolutionRes.data);
-        setCategoriesData(categoriesRes.data);
+  Promise.all([
+    axios.get("http://localhost:5001/auth/complaints/stats/status", {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+    axios.get("http://localhost:5001/auth/complaints/stats/count", {
+      headers: { Authorization: `Bearer ${token}` },
+      params: { period },
+    }),
+    axios.get("http://localhost:5001/auth/complaints/stats/resolution-time", {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+    axios.get("http://localhost:5001/auth/complaints/stats/categories", {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  ])
+    .then(([statusRes, trendRes, resolutionRes, categoriesRes]) => {
+      const formatIST = (dateStr) =>
+        new Date(dateStr).toLocaleDateString("en-IN", {
+          timeZone: "Asia/Kolkata",
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        });
 
-  
-        console.log("One Status Data:", statusRes.data?.[0]);
-        console.log("One Trend Data:", trendRes.data?.[0]);
-        console.log("One Resolution Data:", resolutionRes.data?.[0]);
-        console.log("One Category Data:", categoriesRes.data?.[0]);
-      })
-      .catch((error) => {
-        console.error("Failed to fetch complaint stats:", error);
-      })
-      .finally(() => setLoading(false));
-  }, [token, period]);
+      // Format the period field for trend data
+      const formattedTrend = trendRes.data.map((item) => ({
+        ...item,
+        period: formatIST(item.period),
+      }));
+
+      // Format the date field for resolution data
+      const formattedResolution = resolutionRes.data.map((item) => ({
+        ...item,
+        date: formatIST(item.date),
+      }));
+
+      setStatusData(statusRes.data);
+      setTrendData(formattedTrend);
+      setResolutionData(formattedResolution);
+      setCategoriesData(categoriesRes.data);
+    })
+    .catch((error) => {
+      console.error("Failed to fetch complaint stats:", error);
+    })
+    .finally(() => setLoading(false));
+}, [token, period]);
+
 
   if (loading) return <p>Loading complaint stats...</p>;
 
